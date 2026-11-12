@@ -1,6 +1,8 @@
 # سجل قراءات المقطرات — دليل الربط
 
-برنامج مستقل لتسجيل قراءات ورقة DCR Operator Log Sheet. الدخول بكلمة سر: حساب لكل شفت (A, B, C, D, F) وحساب للمشرف.
+برنامج مستقل لتسجيل قراءات ورقة DCR Operator Log Sheet. الدخول بكلمة سر: لكل شفت (A, B, C, D, F) حساب في DCR 1 وحساب في DCR 2، وحساب للمشرف.
+
+الرابط: https://mesh3998.github.io/dcr-log/
 
 ## الملفات
 
@@ -16,16 +18,18 @@
 
 1. افتح console.firebase.google.com بحساب Google واضغط **Add project**. سمّه مثلاً `dcr-log`، وما تحتاج Google Analytics.
 2. **Build ← Authentication ← Get started ← Sign-in method**: فعّل **Email/Password** واحفظ.
-3. **Authentication ← Users ← Add user**: ضيف الحسابات الستة وحط لكل واحد كلمة سر:
+3. **Authentication ← Users ← Add user**: ضيف الحسابات وحط لكل واحد كلمة سر:
 
    ```
-   shift-a@dcr-log.example
-   shift-b@dcr-log.example
-   shift-c@dcr-log.example
-   shift-d@dcr-log.example
-   shift-f@dcr-log.example
+   shift-a-1@dcr-log.example    shift-a-2@dcr-log.example
+   shift-b-1@dcr-log.example    shift-b-2@dcr-log.example
+   shift-c-1@dcr-log.example    shift-c-2@dcr-log.example
+   shift-d-1@dcr-log.example    shift-d-2@dcr-log.example
+   shift-f-1@dcr-log.example    shift-f-2@dcr-log.example
    admin@dcr-log.example
    ```
+
+   الرقم الأخير هو القسم: `-1` حق DCR 1 و `-2` حق DCR 2.
 
    هذي أسماء دخول مو إيميلات حقيقية، وما ينرسل عليها شي. إذا Firebase ما قبل الاسم، لازم يتغير النطاق بملف `config.js` وملف `firestore.rules` مع بعض.
 4. **Authentication ← Settings ← User actions**: إذا لقيت خيار إنشاء الحسابات (sign-up) طفّه، عشان محد يضيف حساب غيرك.
@@ -45,8 +49,9 @@
 
 ## 3) شلون يشتغل
 
-- **الشفت:** يختار حرف شفته ويكتب كلمة السر. شخصين يقدرون يدخلون بنفس الحساب بنفس الوقت.
-- **الفترة:** تتثبت تلقائي حسب الساعة (الافتراضي: الصبح 7:00، العصر 15:00، الليل 23:00). الشفت يختار وقت القراءة والمقطرة بس.
+- **الشفت:** يختار حرف شفته وقسمه (DCR 1 أو DCR 2) ويكتب كلمة السر. كل حساب يشوف مقطرات قسمه بس: DCR 1 من D1A إلى D4B، و DCR 2 من D5A إلى D8B.
+- **الفترة:** تتثبت تلقائي حسب الساعة (الافتراضي: M من 7:00، A من 15:00، N من 23:00). الشفت يختار وقت القراءة والمقطرة بس.
+- **الداشبورد عند الشفت:** اللون الأخضر الخفيف يبين القراءات اللي يقدر يسجلها ويعدلها الحين، والباقي للعرض بس.
 - **قراءة متأخرة:** أول ساعة بعد تبديل الشفت يظل خيار الفترة السابقة موجود، عشان اللي ما لحق يسجل آخر قراءة.
 - **المشرف:** يفتح على الداشبورد، يقدر يسجل ويعدل لأي تاريخ وشفت، ينزل Excel لليوم والشهر، ويغير مواعيد الشفتات والمهلة.
 - **بدون نت:** القراءة تنحفظ على الجهاز وترتفع أول ما يرجع الاتصال، بشرط ما تتسكر الصفحة.

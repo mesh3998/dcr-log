@@ -12,23 +12,31 @@ service cloud.firestore {
     function isAdmin() {
       return signedIn() && request.auth.token.email == 'admin@dcr-log.example';
     }
-    // حسابات الشفتات A, B, C, D, F
-    function isShift() {
-      return signedIn() && request.auth.token.email.matches('shift-[abcdf]@dcr-log[.]example');
+    // حسابات الشفتات A, B, C, D, F في DCR 1
+    function isDcr1() {
+      return signedIn() && request.auth.token.email.matches('shift-[abcdf]-1@dcr-log[.]example');
+    }
+    // حسابات الشفتات A, B, C, D, F في DCR 2
+    function isDcr2() {
+      return signedIn() && request.auth.token.email.matches('shift-[abcdf]-2@dcr-log[.]example');
     }
     function known() {
-      return isAdmin() || isShift();
+      return isAdmin() || isDcr1() || isDcr2();
+    }
+    // الورقتين 0 و 1 حق DCR 1 (D1A إلى D4B)، والورقتين 2 و 3 حق DCR 2 (D5A إلى D8B)
+    function mayWrite(g) {
+      return isAdmin() || (isDcr1() && g <= 1) || (isDcr2() && g >= 2);
     }
 
     // ورقة القراءات: مستند لكل تاريخ ولكل ورقة (4 مقطرات)، اسمه مثل 2026-11-11_1
     match /sheets/{id} {
       allow read: if known();
-      allow create, update: if known()
-        && request.resource.data.date is string
-        && request.resource.data.month is string
-        && request.resource.data.g is int
+      allow create, update: if request.resource.data.g is int
         && request.resource.data.g >= 0
         && request.resource.data.g <= 3
+        && mayWrite(request.resource.data.g)
+        && request.resource.data.date is string
+        && request.resource.data.month is string
         && id == request.resource.data.date + '_' + string(request.resource.data.g);
       allow delete: if isAdmin();
     }
