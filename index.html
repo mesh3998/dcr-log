@@ -1086,6 +1086,25 @@ async function onSettings(ev){
   finally { $("set-save").disabled = false; }
 }
 
+/* ---------- idle sign-out (shift accounts only, never the admin) ---------- */
+// A shift device left untouched for half an hour is signed out and has to enter its password again.
+// The last-activity time is kept on the device, so reopening the page after a long break counts too.
+const IDLE_MS = 30 * 60 * 1000;
+let lastActive = Date.now(), lastStored = 0;
+function touch(force){
+  lastActive = Date.now();
+  if (force || lastActive - lastStored > 10000) { lastStored = lastActive; ls("dcr.active", String(lastActive)); }
+}
+function idleOut(){
+  if (S.role !== "shift" || !auth || S.stale || S.form.saving) return false;   // offline: wait, so nothing waiting to upload is lost
+  if (Date.now() - lastActive < IDLE_MS) return false;
+  S.loginMsg = "طلعناك من الحساب لأن الصفحة بقت نص ساعة بدون استخدام. اكتب كلمة السر وادخل مرة ثانية.";
+  S.form.dirty = false; S.form.swtDirty = false;
+  FB.signOut(auth).catch(() => {});
+  return true;
+}
+function onActivity(){ if (!idleOut()) touch(false); }
+
 /* ---------- change own password ---------- */
 function pwSay(t){ $("pw-msg").textContent = t || ""; }
 function togglePw(show){
@@ -1152,6 +1171,7 @@ async function onLogin(ev){
   const pass = $("pass").value;
   if (!pass) return lmsg("اكتب كلمة السر.");
   $("login").disabled = true; lmsg("");
+  touch(true);
   try { await FB.signInWithEmailAndPassword(auth, emailOf(S.acc, S.accDcr), pass); $("pass").value = ""; ls("dcr.acc", S.acc); ls("dcr.accdcr", String(S.accDcr)); }
   catch (err) { lmsg(loginError(err)); }
   finally { $("login").disabled = false; }
@@ -1164,6 +1184,8 @@ function onAuth(user){
   if (m && m[3] === DOMAIN && SHIFTS.includes(m[2].toUpperCase())) { S.role = "shift"; S.shift = m[2].toUpperCase(); S.dcr = Number(m[1]); }
   else if (email === "admin@" + DOMAIN) S.role = "admin";
   else { S.role = null; S.loginMsg = "هالحساب مو معرّف بالبرنامج."; FB.signOut(auth).catch(() => {}); return; }
+  lastActive = Number(ls("dcr.active")) || Date.now();      // a restored session continues from its last activity
+  if (idleOut()) return;
   startApp();
 }
 function startApp(){
@@ -1255,7 +1277,8 @@ function wire(){
   on("x-day", "click", exportDay); on("x-month", "click", exportMonth); on("x-copy", "click", copySheet);
   on("setcard", "input", () => { setDirty = true; });
   on("setcard", "submit", onSettings);
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) applyClock(false); });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && !idleOut()) applyClock(false); });
+  for (const name of ["pointerdown", "keydown", "input", "wheel", "touchstart"]) document.addEventListener(name, onActivity, {capture:true, passive:true});
 }
 
 /* ---------- boot ---------- */
@@ -1273,7 +1296,7 @@ async function boot(){
   try { const app = FB.initializeApp(fc); auth = FB.getAuth(app); db = FB.getFirestore(app); }
   catch (e) { return fatal("بيانات Firebase بملف config.js فيها غلط."); }
   FB.onAuthStateChanged(auth, onAuth);
-  setInterval(() => applyClock(false), 30000);
+  setInterval(() => { if (!idleOut()) applyClock(false); }, 30000);
 }
 boot();
 </script>
