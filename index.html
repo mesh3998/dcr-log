@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>سجل قراءات المقطرات</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Layout: a control-room logbook. Sticky bar (sheet date + two views), then either the entry
+     form ruled like the paper sheet, or the review: coverage grid first, the full sheet below. */
+  --paper:#EEF2F1; --surface:#FFFFFF; --ink:#12262B; --muted:#586D72; --line:#C9D4D4;
+  --accent:#0B6B76; --accent-ink:#FFFFFF; --accent-soft:#DCEEF0;
+  --ok:#1C7A4B; --ok-soft:#DDF1E6; --warn:#9A5B06; --warn-soft:#FBEBCF; --bad:#B0342A; --bad-soft:#F9DEDB;
+  --chip-s:58%; --chip-bg-l:90%; --chip-fg-l:26%;
+  --font-ui:"IBM Plex Sans Arabic","Segoe UI",Tahoma,"Noto Sans Arabic",system-ui,sans-serif;
+  --font-num:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0D1618; --surface:#152124; --ink:#E3ECEC; --muted:#93A6A9; --line:#2A3C40;
+    --accent:#56BBC6; --accent-ink:#04262A; --accent-soft:#143A40;
+    --ok:#62C493; --ok-soft:#153526; --warn:#E2AC5E; --warn-soft:#3A2B10; --bad:#EF867B; --bad-soft:#40201C;
+    --chip-s:42%; --chip-bg-l:24%; --chip-fg-l:82%;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0D1618; --surface:#152124; --ink:#E3ECEC; --muted:#93A6A9; --line:#2A3C40;
+  --accent:#56BBC6; --accent-ink:#04262A; --accent-soft:#143A40;
+  --ok:#62C493; --ok-soft:#153526; --warn:#E2AC5E; --warn-soft:#3A2B10; --bad:#EF867B; --bad-soft:#40201C;
+  --chip-s:42%; --chip-bg-l:24%; --chip-fg-l:82%;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--font-ui);font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+[hidden]{display:none !important}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.wrap{max-width:1180px;margin:0 auto;padding:16px 16px 88px;display:flex;flex-direction:column;gap:16px}
+
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-size:1.5rem;font-weight:700;line-height:1.25;margin:0;text-wrap:balance}
+.sub{margin:2px 0 0;color:var(--muted);font-family:var(--font-num);font-size:.75rem;letter-spacing:.08em}
+h2{font-size:1.0625rem;font-weight:600;line-height:1.3;margin:0;text-wrap:balance}
+.conn{display:inline-flex;align-items:center;gap:8px;font-size:.8125rem;padding:4px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted)}
+.conn::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.conn[data-state="ok"]{color:var(--ok);border-color:var(--ok)} .conn[data-state="ok"]::before{background:var(--ok)}
+.conn[data-state="ro"]{color:var(--warn);border-color:var(--warn)} .conn[data-state="ro"]::before{background:var(--warn)}
+.conn[data-state="off"]{color:var(--bad);border-color:var(--bad)} .conn[data-state="off"]::before{background:var(--bad)}
+
+.bar{position:sticky;top:0;z-index:6;background:var(--paper);padding:8px 0;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+.datebox{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.datefield{display:flex;flex-direction:column;gap:0}
+#date{height:44px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-family:var(--font-num);font-size:1rem}
+#dayname{font-size:.75rem;color:var(--muted);padding-inline-start:2px}
+.icon{width:44px;height:44px;display:inline-grid;place-items:center;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ghost{min-height:44px;padding:0 14px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.ghost:hover,.icon:hover{border-color:var(--accent)}
+.ghost:disabled{opacity:.55;cursor:default}
+.tabs{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.tabs button{min-height:44px;min-width:104px;padding:0 18px;border:0;background:transparent;font-weight:600}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--paper)}
+
+.notice{margin:0;padding:10px 14px;border-radius:8px;border:1px solid var(--warn);background:var(--warn-soft);color:var(--ink);font-size:.9375rem}
+.notice[data-kind="bad"]{border-color:var(--bad);background:var(--bad-soft)}
+
+.view{display:flex;flex-direction:column;gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.cardhead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.hint{margin:0;color:var(--muted);font-size:.8125rem}
+.count{font-family:var(--font-num);font-size:.8125rem;color:var(--muted)}
+
+.pick{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:12px 16px}
+.pick .hint{grid-column:1/-1}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.lab{font-size:.8125rem;color:var(--muted);font-weight:500}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--paper)}
+.seg button{flex:1 1 0;min-width:0;min-height:44px;padding:0 8px;border:0;border-inline-end:1px solid var(--line);background:transparent;font-weight:600;white-space:nowrap}
+.seg button:last-child{border-inline-end:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.seg.num button{font-family:var(--font-num)}
+.seg.sm button{min-height:38px;font-size:.875rem}
+.seg.need{border-color:var(--bad);box-shadow:0 0 0 2px var(--bad-soft)}
+
+.dcrs{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.dcr{display:flex;flex-direction:column;gap:8px;min-width:0}
+.dcr-name{font-family:var(--font-num);font-size:.75rem;letter-spacing:.08em;color:var(--muted)}
+.ugrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.unit{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;min-height:52px;padding:4px;border:1px solid var(--line);border-radius:8px;background:var(--paper);font-family:var(--font-num)}
+.unit .uname{font-weight:600;font-size:.9375rem}
+.unit .ustate{font-size:.6875rem;min-height:1em;line-height:1;color:var(--muted)}
+.unit.done{background:var(--ok-soft);border-color:var(--ok)} .unit.done .ustate{color:var(--ok)}
+.unit.idle{background:var(--warn-soft);border-color:var(--warn)} .unit.idle .ustate{color:var(--warn)}
+.unit.sel{outline:3px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+
+.formhead{display:flex;justify-content:space-between;gap:12px 24px;flex-wrap:wrap;align-items:flex-end}
+.formhead h2{font-size:1.25rem}
+.formhead h2 span[dir]{font-family:var(--font-num)}
+.formhead .at{font-weight:400;color:var(--muted);font-size:1rem}
+.meta{margin:2px 0 0;font-size:.8125rem;color:var(--muted)}
+.swt{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border:1px dashed var(--line);border-radius:8px}
+.swt label{font-weight:600;font-size:.9375rem}
+.swtg{font-family:var(--font-num);font-size:.75rem;color:var(--muted);margin-inline-end:auto}
+.swt .u,.row .u{font-family:var(--font-num);font-size:.75rem;color:var(--muted)}
+.num-in{width:112px;height:44px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--paper);font-family:var(--font-num);font-size:1rem;font-variant-numeric:tabular-nums;text-align:center;direction:ltr}
+.num-in:focus{background:var(--surface);border-color:var(--accent)}
+.num-in.bad,.row.bad .num-in{border-color:var(--bad);background:var(--bad-soft)}
+.rows{display:grid;grid-template-columns:1fr;column-gap:32px}
+.row{display:grid;grid-template-columns:26px minmax(0,1fr) 112px 58px;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
+.row .n{font-family:var(--font-num);font-size:.8125rem;color:var(--muted);text-align:right}
+.row label{display:flex;flex-direction:column;line-height:1.25;font-size:.9375rem;min-width:0;overflow-wrap:anywhere}
+.row .prev{font-family:var(--font-num);font-size:.8125rem;color:var(--muted);font-variant-numeric:tabular-nums;text-align:center}
+form.idle .rows{opacity:.55}
+.actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;bottom:0;background:var(--surface);padding:12px 0 4px;border-top:1px solid var(--line);margin-top:4px}
+.primary{min-height:48px;padding:0 28px;border:0;border-radius:8px;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:1rem}
+.primary:disabled{opacity:.6;cursor:default}
+.danger{min-height:44px;padding:0 14px;border:1px solid var(--bad);border-radius:8px;background:transparent;color:var(--bad)}
+.fmsg{margin:0;font-size:.875rem;color:var(--bad);flex:1 1 220px}
+.fmsg.good{color:var(--ok)}
+
+.tiles{display:grid;grid-template-columns:1.3fr repeat(3,1fr);gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.tile .tl{font-size:.8125rem;color:var(--muted);display:flex;gap:8px;align-items:baseline;flex-wrap:wrap} .tile .tl small{font-family:var(--font-num);font-size:.6875rem}
+.tile .tv{font-family:var(--font-num);font-size:1.75rem;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums;direction:ltr;text-align:right}
+.tile .tv small{font-size:.875rem;font-weight:400;color:var(--muted)}
+.prog{height:6px;border-radius:3px;background:var(--paper);overflow:hidden;direction:ltr}
+.prog i{display:block;height:100%;background:var(--accent)}
+.chips{display:flex;gap:4px;flex-wrap:wrap;min-height:24px}
+.chip{display:inline-grid;place-items:center;min-width:24px;height:24px;padding:0 6px;border-radius:6px;font-family:var(--font-num);font-size:.8125rem;font-weight:600;background:hsl(var(--h,200) var(--chip-s) var(--chip-bg-l));color:hsl(var(--h,200) var(--chip-s) var(--chip-fg-l))}
+.chip.none{background:var(--paper);color:var(--muted)}
+.stag{font-family:var(--font-num);font-size:.6875rem;color:var(--warn);margin-inline-start:4px}
+
+.scroller{overflow-x:auto;border:1px solid var(--line);border-radius:8px;direction:ltr}
+table{border-collapse:separate;border-spacing:0;font-family:var(--font-num);font-size:.8125rem;font-variant-numeric:tabular-nums;width:100%}
+th,td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:6px 8px;text-align:center;white-space:nowrap;font-weight:400}
+tr>:last-child{border-right:0} tbody tr:last-child>*,tfoot tr:last-child>*{border-bottom:0}
+thead th{background:var(--paper);font-weight:600;color:var(--ink)}
+.matrix td{padding:0}
+.matrix .uh{font-weight:600;min-width:64px;background:var(--paper)}
+.matrix .ph{font-family:var(--font-ui)}
+.matrix tr.gs>*{border-top:2px solid var(--line)} .matrix tbody tr:first-child>*{border-top:0}
+.matrix tr.dcr2>*{border-top:2px solid var(--ink)}
+.cell{display:flex;align-items:center;justify-content:center;width:100%;min-width:64px;min-height:40px;border:0;background:transparent;padding:4px}
+.cell:hover{background:var(--accent-soft)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--line)}
+.sheet .c0{min-width:38px;color:var(--muted)} .sheet .c1{text-align:left;font-family:var(--font-ui);font-size:.875rem;min-width:236px} .sheet .c2{min-width:62px;color:var(--muted)}
+.sheet tbody .c0,.sheet tbody .c1,.sheet tfoot .c0,.sheet tfoot .c1{background:var(--surface)}
+.sheet td.v{min-width:54px} .sheet .us{border-left:2px solid var(--ink)} .sheet .dash{color:var(--muted)}
+.sheet tfoot td,.sheet tfoot th{background:var(--paper);border-top:1px solid var(--line)}
+@media (min-width:760px){ .sheet .c0{position:sticky;left:0;z-index:1} .sheet .c1{position:sticky;left:38px;z-index:1} }
+.sheetmeta{margin:0;font-family:var(--font-num);font-size:.8125rem;color:var(--muted);direction:ltr;text-align:left}
+.exports{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+#toast{position:fixed;inset-inline:16px;top:12px;margin:0 auto;max-width:420px;padding:12px 16px;border-radius:10px;background:var(--ink);color:var(--paper);text-align:center;font-size:.9375rem;z-index:20;opacity:0;transform:translateY(-8px);pointer-events:none;transition:opacity .18s,transform .18s}
+#toast.show{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+
+@media (min-width:980px){ .rows{grid-template-columns:1fr 1fr;grid-template-rows:repeat(13,auto);grid-auto-flow:column} }
+@media (max-width:760px){
+  .pick{grid-template-columns:1fr} .dcrs{grid-template-columns:1fr} .tiles{grid-template-columns:1fr 1fr}
+  .tabs{flex:1 1 100%} .tabs button{flex:1}
+  .matrix th,.matrix td{padding:6px 2px} .matrix .uh{min-width:50px} .cell{min-width:44px}
+  .sheet .c1{min-width:148px;white-space:normal} .sheet .c2{min-width:50px} .sheet td.v{min-width:48px}
+  .seg.sm button{padding:0 6px;font-size:.8125rem}
+}
+@media (max-width:420px){
+  .row{grid-template-columns:22px minmax(0,1fr) 92px 44px;gap:8px} .num-in{width:92px}
+  .unit .uname{font-size:.875rem}
+}
+
+/* standalone: sign-in, account badge, admin dashboard */
+.who{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;min-height:36px;padding:0 14px;border-radius:8px;font-weight:700;font-size:1.0625rem;background:hsl(var(--h,200) var(--chip-s) var(--chip-bg-l));color:hsl(var(--h,200) var(--chip-s) var(--chip-fg-l))}
+.badge.adm{background:var(--ink);color:var(--paper)}
+.ghost.sm{min-height:36px;padding:0 12px;font-size:.875rem}
+.login{max-width:440px;width:100%;margin:24px auto 0;gap:16px}
+.login form{display:flex;flex-direction:column;gap:16px}
+.accs button{font-family:var(--font-num)} .accs button[data-acc="admin"]{font-family:var(--font-ui);flex:1.7 1 0}
+.txt{height:44px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper);font-size:1rem;width:100%}
+.txt:focus{background:var(--surface);border-color:var(--accent)}
+.ctx{margin:0;font-weight:600;font-size:.9375rem}
+.seg.fixed button{cursor:default}
+body[data-role="shift"] .pick{grid-template-columns:1fr 1fr}
+.week .uh{font-weight:600;min-width:64px;background:var(--paper)} .week .ph{font-family:var(--font-ui)}
+.week .wk{min-width:64px} .week .wn{font-weight:600} .week .wk.full{background:var(--ok-soft)} .week .wk.part{background:var(--warn-soft)} .week .wk.none .wn{color:var(--muted)}
+.week .wk .chip{min-width:20px;height:20px;font-size:.6875rem;padding:0 4px;margin-left:4px;vertical-align:middle}
+.week .wt{font-weight:600}
+.wd{border:0;background:transparent;font:inherit;font-weight:600;color:var(--accent);padding:4px;min-height:36px;text-decoration:underline}
+.setgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 16px}
+@media (max-width:760px){ .setgrid{grid-template-columns:1fr 1fr} body[data-role="shift"] .pick{grid-template-columns:1fr} .week th,.week td{padding:6px 2px} .week .wk,.week .uh{min-width:46px} }
+.login .fmsg{flex:none;min-height:1.4em}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="top">
+    <div>
+      <h1 id="title">سجل قراءات المقطرات</h1>
+      <p class="sub" dir="ltr">DCR OPERATOR LOG</p>
+    </div>
+    <div class="who" id="who" hidden>
+      <span class="badge" id="badge"></span>
+      <span class="conn" id="conn" data-state="loading">يتصل…</span>
+      <button type="button" class="ghost sm" id="logout">خروج</button>
+    </div>
+  </header>
+
+  <p class="notice" id="notice" role="status" hidden></p>
+  <p class="hint" id="loading">يحمّل…</p>
+
+  <section class="card login" id="view-login" hidden>
+    <h2>تسجيل الدخول</h2>
+    <form id="loginform" novalidate>
+      <div class="field"><span class="lab" id="lab-acc">الحساب</span><div class="seg accs" id="seg-acc" dir="ltr" role="group" aria-labelledby="lab-acc"></div></div>
+      <div class="field"><label class="lab" for="pass">كلمة السر</label><input class="txt" id="pass" type="password" autocomplete="current-password" dir="ltr"></div>
+      <button type="submit" class="primary" id="login">دخول</button>
+      <p class="fmsg" id="lmsg" role="alert"></p>
+    </form>
+  </section>
+
+  <div class="view" id="app" hidden>
+    <div class="bar">
+      <div class="datebox" id="datebox">
+        <button type="button" class="icon" id="d-prev" aria-label="اليوم السابق"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <div class="datefield">
+          <label for="date" class="vh">تاريخ الورقة</label>
+          <input type="date" id="date">
+          <span id="dayname"></span>
+        </div>
+        <button type="button" class="icon" id="d-next" aria-label="اليوم التالي"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <button type="button" class="ghost" id="d-today">اليوم</button>
+      </div>
+      <p class="ctx" id="ctxline" hidden></p>
+      <div class="tabs" role="tablist" aria-label="الشاشات">
+        <button type="button" role="tab" id="tab-entry" aria-controls="view-entry" aria-selected="true">تسجيل</button>
+        <button type="button" role="tab" id="tab-review" aria-controls="view-review" aria-selected="false">الداشبورد</button>
+      </div>
+    </div>
+
+    <section class="view" id="view-entry" role="tabpanel" aria-labelledby="tab-entry">
+      <div class="card pick">
+        <div class="field" id="f-shift"><span class="lab" id="lab-shift">الشفت</span><div class="seg num" id="seg-shift" dir="ltr" role="group" aria-labelledby="lab-shift"></div></div>
+        <div class="field"><span class="lab" id="lab-period">الفترة</span><div class="seg" id="seg-period" role="group" aria-labelledby="lab-period"></div></div>
+        <div class="field"><span class="lab" id="lab-slot">وقت القراءة</span><div class="seg num" id="seg-slot" role="group" aria-labelledby="lab-slot"></div></div>
+        <p class="hint" id="nighthint" hidden>قراءات 1:00 و 5:00 تنكتب على تاريخ الورقة نفسها، يعني اليوم اللي بدا مع شفت الصبح.</p>
+      </div>
+
+      <div class="card">
+        <div class="cardhead"><h2>المقطرة</h2><span class="count" id="ucount" dir="ltr"></span></div>
+        <div class="dcrs" id="units" dir="ltr"></div>
+      </div>
+
+      <form class="card" id="form" novalidate>
+        <div class="formhead">
+          <div>
+            <h2><span id="fh-unit" dir="ltr">D1A</span> <span class="at">الساعة</span> <span id="fh-slot" dir="ltr">8:00</span></h2>
+            <p class="meta" id="fmeta"></p>
+          </div>
+          <div class="field"><span class="lab" id="lab-st">حالة المقطرة</span><div class="seg sm" id="seg-status" role="group" aria-labelledby="lab-st"></div></div>
+        </div>
+        <div class="swt" dir="ltr">
+          <label for="swt">Sea Water Temperature</label>
+          <span class="swtg" id="swtg"></span>
+          <input class="num-in" id="swt" type="text" inputmode="decimal" autocomplete="off">
+          <span class="u">°C</span>
+        </div>
+        <p class="hint" id="prevhint" hidden></p>
+        <div class="rows" id="rows" dir="ltr"></div>
+        <div class="actions">
+          <button type="submit" class="primary" id="save">حفظ القراءة</button>
+          <button type="button" class="danger" id="del" hidden>مسح القراءة</button>
+          <p class="fmsg" id="fmsg" role="alert"></p>
+        </div>
+      </form>
+    </section>
+
+    <section class="view" id="view-review" role="tabpanel" aria-labelledby="tab-review" hidden>
+      <div class="tiles" id="tiles"></div>
+      <div class="card">
+        <div class="cardhead"><h2>تغطية اليوم</h2><p class="hint">الحرف هو الشفت اللي سجل. اضغط أي خانة تفتح قراءتها.</p></div>
+        <div class="scroller"><table class="matrix" id="matrix"></table></div>
+      </div>
+      <div class="card" id="weekcard" hidden>
+        <div class="cardhead"><h2>آخر 7 أيام</h2><p class="hint">الرقم هو عدد المقطرات المسجلة من 16 لكل وقت. اضغط التاريخ يفتح ورقته.</p></div>
+        <div class="scroller"><table class="week" id="week"></table></div>
+      </div>
+      <div class="card">
+        <div class="cardhead"><h2>ورقة القراءات</h2><div class="seg sm num" id="seg-group" dir="ltr" role="group" aria-label="الورقة"></div></div>
+        <p class="sheetmeta" id="sheetmeta"></p>
+        <div class="scroller"><table class="sheet" id="sheet"></table></div>
+        <div class="exports">
+          <button type="button" class="ghost" id="x-day" hidden>تنزيل Excel لهاليوم</button>
+          <button type="button" class="ghost" id="x-month" hidden>تنزيل Excel للشهر كله</button>
+          <button type="button" class="ghost" id="x-copy">نسخ الورقة</button>
+          <span class="fmsg" id="xmsg" role="status"></span>
+        </div>
+      </div>
+      <form class="card" id="setcard" novalidate hidden>
+        <div class="cardhead"><h2>مواعيد الشفتات</h2><p class="hint">البرنامج يثبّت الفترة للشفت حسب هالمواعيد.</p></div>
+        <div class="setgrid">
+          <div class="field"><label class="lab" for="set-m">يبدا الصبح</label><select class="txt" id="set-m"></select></div>
+          <div class="field"><label class="lab" for="set-a">يبدا العصر</label><select class="txt" id="set-a"></select></div>
+          <div class="field"><label class="lab" for="set-n">يبدا الليل</label><select class="txt" id="set-n"></select></div>
+          <div class="field"><label class="lab" for="set-g">مهلة القراءة المتأخرة (دقيقة)</label><input class="txt" id="set-g" type="number" min="0" max="240" step="5" inputmode="numeric"></div>
+        </div>
+        <div class="exports">
+          <button type="submit" class="ghost" id="set-save">حفظ المواعيد</button>
+          <span class="fmsg" id="smsg" role="status"></span>
+        </div>
+      </form>
+    </section>
+  </div>
+</main>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="config.js"></script>
+<script type="module">
+/* ---------- the sheet ---------- */
+// [Sl.#, description, unit, fixed decimals]
+const ITEMS = [
+  [1,"Distillate Flow","T/H"],[2,"Distillate Conductivity","µs/cm"],[3,"Last Stage Dist. Temperature","°C"],
+  [4,"Sea Water flow","T/H"],[5,"S.W. makeup Flow","T/H"],[6,"Brine Blow Down Flow","T/H"],
+  [7,"Last Stage brine temperature","°C"],[8,"LP Steam Flow","T/H"],[9,"Dist. Sea Water Inlet Temperature","°C"],
+  [10,"L.P. steam Temperature","°C"],[11,"Return Condensate Flow","T/H"],[12,"Return Condensate Conductivity","µs/cm"],
+  [13,"Return Cond. Cation Conductivity","µs/cm",2],[14,"Return Condensate Temperature","°C"],
+  [15,"De-Super heater Spray Water Flow","T/H"],[16,"Brine recirculation Flow","T/H"],[17,"First Stage Brine Level","cm"],
+  [18,"Brine Heater Shell pressure","BarA",2],[19,"Brine inlet Temperature","°C"],[20,"Brine outlet Temperature","°C"],
+  [21,"Vacuum First Stage","BarA",2],[22,"Vacuum Last Stage","BarA",2],[23,"Antiscalent Chemical Flow","Kg/Hr"],
+  [24,"Sodium Sulphite Flow","Kg/Hr"],[25,"Sea water outlet Temp. from HRS","°C"]
+];
+const UNITS = ["D1A","D1B","D2A","D2B","D3A","D3B","D4A","D4B","D5A","D5B","D6A","D6B","D7A","D7B","D8A","D8B"];
+const GROUPS = [0,1,2,3].map(i => UNITS.slice(i*4, i*4+4));          // one paper sheet = 4 distillers
+const GROUP_LABEL = GROUPS.map(g => g[0] + "–" + g[3]);
+const SHIFTS = ["A","B","C","D","F"];
+const HUE = {A:208, B:28, C:150, D:278, F:342};
+const PERIODS = [{k:"m",ar:"صبح",slots:["0800","1200"]},{k:"a",ar:"عصر",slots:["1600","2000"]},{k:"n",ar:"ليل",slots:["0100","0500"]}];
+const SLOTS = ["0800","1200","1600","2000","0100","0500"];           // sheet order
+const SLOT_LABEL = {"0800":"8:00","1200":"12:00","1600":"16:00","2000":"20:00","0100":"1:00","0500":"5:00"};
+const STATUS = [{k:"run",ar:"شغالة",en:""},{k:"SB",ar:"S/B",en:"S/B"},{k:"AM",ar:"A/M",en:"A/M"},{k:"NA",ar:"N/A",en:"N/A"}];
+const STATUS_KEYS = STATUS.map(s => s.k);
+const STATUS_EN = {run:"", SB:"S/B", AM:"A/M", NA:"N/A"};
+const TOTAL = UNITS.length * SLOTS.length;
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad = n => String(n).padStart(2,"0");
+const ymd = d => d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate());
+const parseYmd = s => { const p = s.split("-").map(Number); return new Date(p[0], p[1]-1, p[2]); };
+const addDays = (s, n) => { const d = parseYmd(s); d.setDate(d.getDate()+n); return ymd(d); };
+const dmy = s => { const p = s.split("-"); return p[2] + "-" + p[1] + "-" + p[0]; };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const groupOf = unit => Math.floor(UNITS.indexOf(unit) / 4);
+const periodOf = slot => PERIODS.find(p => p.slots.includes(slot));
+function normNum(raw){
+  const s = String(raw == null ? "" : raw).trim()
+    .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
+    .replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))
+    .replace(/[٫,،]/g, ".").replace(/\s+/g, "");
+  if (s === "" || s === "-" || s === "—" || s === "–") return {ok:true, v:null};
+  if (!/^-?(\d+\.?\d*|\.\d+)$/.test(s)) return {ok:false, v:null};
+  const v = Number(s);
+  return Number.isFinite(v) ? {ok:true, v} : {ok:false, v:null};
+}
+const isNum = x => typeof x === "number" && Number.isFinite(x);
+function fmt(v, dp){
+  if (!isNum(v)) return "";
+  if (dp) { const f = v.toFixed(dp); if (Math.abs(Number(f) - v) < 1e-9) return f; }
+  return String(Math.round(v * 10000) / 10000);
+}
+function ls(key, val){
+  try { if (val === undefined) return localStorage.getItem(key); localStorage.setItem(key, val); } catch (e) {}
+  return null;
+}
+// Shared data is untrusted: keep only what the sheet knows.
+function san(e){
+  if (!e || typeof e !== "object") return null;
+  const src = e.v && typeof e.v === "object" ? e.v : {};
+  const v = {};
+  for (const it of ITEMS) v[it[0]] = isNum(src[it[0]]) ? src[it[0]] : null;
+  return { s: SHIFTS.includes(e.s) ? e.s : "", st: STATUS_KEYS.includes(e.st) ? e.st : "run", v,
+           by: typeof e.by === "string" ? e.by : null, at: isNum(e.at) ? e.at : null };
+}
+function entryIn(docs, unit, slot){
+  const d = docs[groupOf(unit)];
+  const u = d && d.u && typeof d.u === "object" ? d.u[unit] : null;
+  return san(u && typeof u === "object" ? u[slot] : null);
+}
+const swtIn = (docs, g) => { const d = docs[g]; return d && isNum(d.swt) ? d.swt : null; };
+
+/* ---------- state ---------- */
+const CFG = window.DCR_CONFIG || {};
+const DOMAIN = String(CFG.accountDomain || "dcr-log.example").toLowerCase();
+const SDK = "https://www.gstatic.com/firebasejs/12.0.0/";
+const S = {
+  view:"entry", date:"", shift:null, slot:"0800", unit:"D1A", group:0, role:null, acc:"A", late:false, loginMsg:"", fatal:"",
+  cfg:{starts:{m:7, a:15, n:23}, grace:60},
+  ctx:{cur:"", prev:"", canLate:false, period:"", date:""},
+  docs:{}, loaded:false, stale:false, failed:"", week:{key:"", by:{}},
+  form:{dirty:false, swtDirty:false, saving:false, st:"run"}
+};
+let FB = null, auth = null, db = null;
+(() => {
+  const un = ls("dcr.unit"); if (UNITS.includes(un)) S.unit = un;
+  S.group = groupOf(S.unit);
+  const ac = ls("dcr.acc"); if (ac === "admin" || SHIFTS.includes(ac)) S.acc = ac;
+})();
+const entryOf = (unit, slot) => entryIn(S.docs, unit, slot);
+const monthOf = date => date.slice(0,7);
+const sheetId = (date, g) => date + "_" + g;
+
+/* ---------- clock: which period is on, and which sheet it belongs to ---------- */
+const ORDER = ["m","a","n"];
+const slotMin = sl => Number(sl.slice(0,2)) * 60 + Number(sl.slice(2));
+function clock(now){
+  const d = new Date(now || Date.now()); const mins = d.getHours() * 60 + d.getMinutes();
+  let cur = "m", since = 1e9;
+  for (const k of ORDER) { const diff = (mins - S.cfg.starts[k] * 60 + 1440) % 1440; if (diff < since) { since = diff; cur = k; } }
+  return {d, mins, cur, since, prev: ORDER[(ORDER.indexOf(cur) + 2) % 3], canLate: since < S.cfg.grace};
+}
+// The sheet's day starts with the morning shift. A night reading written after the morning
+// shift has started still belongs to yesterday's sheet.
+function sheetDateFor(period, c){
+  const base = new Date(c.d);
+  if (c.mins < S.cfg.starts.m * 60) base.setDate(base.getDate() - 1);
+  if (period === "n" && c.cur === "m") base.setDate(base.getDate() - 1);
+  return ymd(base);
+}
+const todaySheet = () => { const c = clock(); return sheetDateFor(c.cur, c); };
+function defaultSlot(period, c){
+  const slots = PERIODS.find(p => p.k === period).slots;
+  if (period !== c.cur) return slots[1];
+  const off = (slotMin(slots[1]) - S.cfg.starts[period] * 60 + 1440) % 1440;
+  return c.since >= off ? slots[1] : slots[0];
+}
+const validStarts = s => s.m !== s.a && s.a !== s.n && s.m !== s.n &&
+  ((s.a - s.m + 24) % 24) + ((s.n - s.a + 24) % 24) + ((s.m - s.n + 24) % 24) === 24;
+function cleanCfg(x){
+  const d = {starts:{m:7, a:15, n:23}, grace:60};
+  if (!x || typeof x !== "object") return d;
+  const st = x.starts && typeof x.starts === "object" ? x.starts : {};
+  const h = k => Number.isInteger(st[k]) && st[k] >= 0 && st[k] <= 23 ? st[k] : d.starts[k];
+  const out = {starts:{m:h("m"), a:h("a"), n:h("n")}, grace: Number.isInteger(x.grace) && x.grace >= 0 && x.grace <= 240 ? x.grace : d.grace};
+  return validStarts(out.starts) ? out : d;
+}
+
+/* ---------- toast / messages ---------- */
+let toastT = 0;
+function toast(t){ const el = $("toast"); el.textContent = t; el.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("show"), 3400); }
+function fmsg(t, good){ const el = $("fmsg"); el.textContent = t || ""; el.classList.toggle("good", !!good); }
+function lmsg(t){ $("lmsg").textContent = t || ""; }
+function errText(err){
+  const c = (err && err.code) || "";
+  if (c === "permission-denied" || c === "unauthenticated") return "قاعدة البيانات رفضت الحفظ لهالحساب. كلّم المشرف.";
+  if (c === "resource-exhausted") return "الحفظ مشغول الحين. انطر شوي وجرّب مرة ثانية.";
+  return "ما انحفظت، يمكن النت قاطع. جرّب مرة ثانية.";
+}
+
+/* ---------- static render ---------- */
+function seg(id, items, current, attr){
+  $(id).innerHTML = items.map(it => `<button type="button" data-${attr}="${it.k}" aria-pressed="${it.k === current}">${esc(it.t)}</button>`).join("");
+}
+function buildRows(){
+  $("rows").innerHTML = ITEMS.map(it =>
+    `<div class="row" id="r${it[0]}"><span class="n">${it[0]}</span>` +
+    `<label for="v${it[0]}">${esc(it[1])}<span class="u">${esc(it[2])}</span></label>` +
+    `<input class="num-in" id="v${it[0]}" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next">` +
+    `<span class="prev" id="p${it[0]}"></span></div>`).join("");
+}
+function renderDate(){
+  $("date").value = S.date;
+  let name = "";
+  try { name = new Intl.DateTimeFormat("ar-KW-u-nu-latn", {weekday:"long", day:"numeric", month:"long", year:"numeric"}).format(parseYmd(S.date)); } catch (e) {}
+  $("dayname").textContent = name + (S.date === todaySheet() ? " · ورقة اليوم" : "");
+  $("ctxline").textContent = "ورقة " + name;
+}
+function renderSegs(){
+  const admin = S.role === "admin";
+  const per = periodOf(S.slot) || PERIODS[0];
+  $("f-shift").hidden = !admin;
+  if (admin) seg("seg-shift", SHIFTS.map(s => ({k:s, t:s})), S.shift, "shift");
+  $("seg-shift").classList.toggle("need", admin && !S.shift);
+  // a shift account only sees its own period (and, for a short while after handover, the one before it)
+  const list = admin ? PERIODS : PERIODS.filter(p => p.k === S.ctx.cur || (S.ctx.canLate && p.k === S.ctx.prev));
+  seg("seg-period", list.map(p => ({k:p.k, t: p.ar + (!admin && p.k !== S.ctx.cur ? " (قراءة متأخرة)" : "")})), per.k, "period");
+  $("seg-period").classList.toggle("fixed", list.length === 1);
+  seg("seg-slot", per.slots.map(s => ({k:s, t:SLOT_LABEL[s]})), S.slot, "slot");
+  $("nighthint").hidden = per.k !== "n";
+}
+function renderStatus(){
+  seg("seg-status", STATUS.map(s => ({k:s.k, t:s.ar})), S.form.st, "st");
+  $("form").classList.toggle("idle", S.form.st !== "run");
+}
+function renderUnits(){
+  let done = 0;
+  const block = (name, groups) => `<div class="dcr"><span class="dcr-name" dir="ltr">${name}</span>` + groups.map(g =>
+    `<div class="ugrid">` + GROUPS[g].map(u => {
+      const e = entryOf(u, S.slot); if (e) done++;
+      const cls = "unit" + (e ? (e.st === "run" ? " done" : " idle") : "") + (u === S.unit ? " sel" : "");
+      const state = e ? (e.st === "run" ? "✓" : STATUS_EN[e.st]) : "";
+      return `<button type="button" class="${cls}" data-unit="${u}" aria-pressed="${u === S.unit}"><span class="uname">${u}</span><span class="ustate">${state}</span></button>`;
+    }).join("") + `</div>`).join("") + `</div>`;
+  $("units").innerHTML = block("DCR 1", [0,1]) + block("DCR 2", [2,3]);
+  $("ucount").textContent = SLOT_LABEL[S.slot] + "  ·  " + done + "/" + UNITS.length;
+}
+function prevSlot(slot){ const i = SLOTS.indexOf(slot); return i > 0 ? SLOTS[i-1] : null; }
+function renderPrev(){
+  const ps = prevSlot(S.slot); const pe = ps ? entryOf(S.unit, ps) : null;
+  for (const it of ITEMS) $("p" + it[0]).textContent = pe && isNum(pe.v[it[0]]) ? fmt(pe.v[it[0]], it[3]) : "";
+  const h = $("prevhint");
+  h.hidden = !pe;
+  if (pe) h.textContent = "الرقم الرمادي جنب كل خانة هو قراءة الساعة " + SLOT_LABEL[ps] + " للمقارنة.";
+}
+function renderMeta(){
+  const e = entryOf(S.unit, S.slot);
+  let t = "ما انسجلت للحين.";
+  if (e) {
+    t = "مسجلة" + (e.s ? " · شفت " + e.s : "");
+    if (e.at) { try { t += " · " + new Intl.DateTimeFormat("ar-KW-u-nu-latn", {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit", hour12:false}).format(new Date(e.at)); } catch (x) {} }
+    if (e.by === "admin") t += " · دخلها المشرف";
+  }
+  $("fmeta").textContent = t;
+  $("save").textContent = S.form.saving ? "يحفظ…" : (e ? "حفظ التعديل" : "حفظ القراءة");
+  $("save").disabled = S.form.saving;
+  $("del").hidden = !(e && (S.role === "admin" || e.s === S.shift));
+}
+function fillForm(){
+  const e = entryOf(S.unit, S.slot);
+  for (const it of ITEMS) { $("v" + it[0]).value = e ? fmt(e.v[it[0]], it[3]) : ""; $("r" + it[0]).classList.remove("bad"); }
+  S.form.st = e ? e.st : "run";
+  const g = groupOf(S.unit);
+  $("swt").value = fmt(swtIn(S.docs, g)); $("swt").classList.remove("bad");
+  $("swtg").textContent = "sheet " + GROUP_LABEL[g];
+  S.form.dirty = false; S.form.swtDirty = false;
+  $("fh-unit").textContent = S.unit; $("fh-slot").textContent = SLOT_LABEL[S.slot];
+  resetDel(); renderStatus(); renderPrev(); renderMeta();
+}
+
+/* ---------- review ---------- */
+const chip = e => (e.s ? `<span class="chip" style="--h:${HUE[e.s]}">${e.s}</span>` : `<span class="chip none">?</span>`) +
+  (e.st !== "run" ? `<span class="stag">${STATUS_EN[e.st]}</span>` : "");
+function renderTiles(){
+  let total = 0;
+  const per = PERIODS.map(p => {
+    let n = 0; const shifts = new Set();
+    for (const u of UNITS) for (const sl of p.slots) { const e = entryOf(u, sl); if (e) { n++; if (e.s) shifts.add(e.s); } }
+    total += n; return {p, n, shifts:[...shifts].sort()};
+  });
+  const max = UNITS.length * 2;
+  $("tiles").innerHTML =
+    `<div class="tile"><span class="tl">المسجل بهالورقة</span><span class="tv">${total}<small>/${TOTAL}</small></span><div class="prog"><i style="width:${Math.round(total / TOTAL * 100)}%"></i></div></div>` +
+    per.map(x => `<div class="tile"><span class="tl">${x.p.ar}<small dir="ltr">${x.p.slots.map(s => SLOT_LABEL[s]).join(" · ")}</small></span>` +
+      `<span class="tv">${x.n}<small>/${max}</small></span><span class="chips">${x.shifts.map(s => `<span class="chip" style="--h:${HUE[s]}">${s}</span>`).join("")}</span></div>`).join("");
+}
+function renderMatrix(){
+  let h = `<thead><tr><th rowspan="2" class="uh">Unit</th>` + PERIODS.map(p => `<th colspan="2" class="ph">${p.ar}</th>`).join("") +
+    `</tr><tr>` + SLOTS.map(s => `<th>${SLOT_LABEL[s]}</th>`).join("") + `</tr></thead><tbody>`;
+  UNITS.forEach((u, i) => {
+    h += `<tr class="${i === 8 ? "dcr2" : (i % 4 === 0 ? "gs" : "")}"><th scope="row" class="uh">${u}</th>` + SLOTS.map(sl => {
+      const e = entryOf(u, sl);
+      const label = u + " " + SLOT_LABEL[sl] + " " + (e ? "شفت " + (e.s || "?") : "ما انسجلت");
+      return `<td><button type="button" class="cell" data-unit="${u}" data-slot="${sl}" aria-label="${esc(label)}">${e ? chip(e) : `<span class="dot"></span>`}</button></td>`;
+    }).join("") + `</tr>`;
+  });
+  $("matrix").innerHTML = h + `</tbody>`;
+}
+function renderSheet(){
+  seg("seg-group", GROUP_LABEL.map((t, i) => ({k:i, t})), S.group, "group");
+  const grp = GROUPS[S.group];
+  const sw = swtIn(S.docs, S.group);
+  $("sheetmeta").textContent = "Date: " + dmy(S.date) + "    Sea Water Temperature: " + (sw === null ? "—" : fmt(sw) + " °C");
+  const entries = {}; let anyIdle = false;
+  for (const u of grp) for (const sl of SLOTS) { const e = entryOf(u, sl); entries[u + sl] = e; if (e && e.st !== "run") anyIdle = true; }
+  let h = `<thead><tr><th rowspan="2" class="c0">Sl.#</th><th rowspan="2" class="c1">Description</th><th rowspan="2" class="c2">Unit</th>` +
+    grp.map(u => `<th colspan="6" class="us">${u}</th>`).join("") + `</tr><tr>` +
+    grp.map(() => SLOTS.map((s, i) => `<th class="${i ? "" : "us"}">${SLOT_LABEL[s]}</th>`).join("")).join("") + `</tr></thead><tbody>`;
+  for (const it of ITEMS) {
+    h += `<tr><td class="c0">${it[0]}</td><td class="c1">${esc(it[1])}</td><td class="c2">${esc(it[2])}</td>` + grp.map(u => SLOTS.map((sl, i) => {
+      const e = entries[u + sl]; const x = e ? e.v[it[0]] : null;
+      const t = isNum(x) ? fmt(x, it[3]) : (e && e.st === "run" ? "—" : "");
+      return `<td class="v${i ? "" : " us"}${t === "—" ? " dash" : ""}">${t}</td>`;
+    }).join("")).join("") + `</tr>`;
+  }
+  const foot = (label, fn) => `<tr><td class="c0"></td><th class="c1" scope="row">${label}</th><td class="c2"></td>` +
+    grp.map(u => SLOTS.map((sl, i) => `<td class="${i ? "" : "us"}">${fn(entries[u + sl])}</td>`).join("")).join("") + `</tr>`;
+  h += `</tbody><tfoot>` + foot("Shift", e => e ? (e.s ? `<span class="chip" style="--h:${HUE[e.s]}">${e.s}</span>` : "?") : "") +
+    (anyIdle ? foot("Status", e => e ? STATUS_EN[e.st] : "") : "") + `</tfoot>`;
+  $("sheet").innerHTML = h;
+}
+function renderReview(){ renderTiles(); renderMatrix(); renderSheet(); renderWeek(); }
+
+/* ---------- Excel (.xlsx written here, no outside library) ---------- */
+const colName = i => { let s = ""; i++; while (i > 0) { const r = (i - 1) % 26; s = String.fromCharCode(65 + r) + s; i = Math.floor((i - 1) / 26); } return s; };
+const xesc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+const XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+const NS = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"';
+// cell = null | value | {v, s}; styles: 1 title, 2 header, 3 boxed centre, 4 boxed text, 5 boxed 0.00, 6 bold
+function sheetXml(sh){
+  let o = XML + `<worksheet ${NS}>`;
+  if (sh.freeze) {
+    const x = sh.freeze[0], y = sh.freeze[1];
+    o += `<sheetViews><sheetView workbookViewId="0"><pane${x ? ` xSplit="${x}"` : ""}${y ? ` ySplit="${y}"` : ""} topLeftCell="${colName(x)}${y + 1}" activePane="${x && y ? "bottomRight" : (y ? "bottomLeft" : "topRight")}" state="frozen"/></sheetView></sheetViews>`;
+  }
+  if (sh.cols) o += "<cols>" + sh.cols.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join("") + "</cols>";
+  o += "<sheetData>";
+  sh.rows.forEach((row, r) => {
+    o += `<row r="${r + 1}">`;
+    row.forEach((cell, c) => {
+      if (cell === null || cell === undefined) return;
+      let v = cell, s = 0;
+      if (typeof cell === "object") { v = cell.v; s = cell.s || 0; }
+      const ref = colName(c) + (r + 1);
+      if (v === null || v === undefined || v === "") o += `<c r="${ref}" s="${s}"/>`;
+      else if (typeof v === "number") o += `<c r="${ref}" s="${s}"><v>${v}</v></c>`;
+      else o += `<c r="${ref}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${xesc(v)}</t></is></c>`;
+    });
+    o += "</row>";
+  });
+  o += "</sheetData>";
+  if (sh.merges && sh.merges.length) o += `<mergeCells count="${sh.merges.length}">` + sh.merges.map(m => `<mergeCell ref="${m}"/>`).join("") + "</mergeCells>";
+  return o + "</worksheet>";
+}
+const STYLES = XML + `<styleSheet ${NS}><numFmts count="1"><numFmt numFmtId="164" formatCode="0.00"/></numFmts>` +
+  `<fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="14"/><name val="Calibri"/></font></fonts>` +
+  `<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFDCEEF0"/><bgColor indexed="64"/></patternFill></fill></fills>` +
+  `<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color auto="1"/></left><right style="thin"><color auto="1"/></right><top style="thin"><color auto="1"/></top><bottom style="thin"><color auto="1"/></bottom><diagonal/></border></borders>` +
+  `<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="7">` +
+  `<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>` +
+  `<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>` +
+  `<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
+  `<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>` +
+  `<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>` +
+  `<xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>` +
+  `<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>` +
+  `</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(u8){ let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC[(c ^ u8[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function zip(files){
+  const enc = new TextEncoder(); const parts = [], central = []; let offset = 0;
+  for (const f of files) {
+    const name = enc.encode(f.name), data = enc.encode(f.text), crc = crc32(data);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(12, 0x21, true);
+    lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true); lh.setUint16(26, name.length, true);
+    parts.push(new Uint8Array(lh.buffer), name, data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(14, 0x21, true);
+    ch.setUint32(16, crc, true); ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true); ch.setUint16(28, name.length, true); ch.setUint32(42, offset, true);
+    central.push(new Uint8Array(ch.buffer), name);
+    offset += 30 + name.length + data.length;
+  }
+  const cd = central.reduce((a, b) => a + b.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true); end.setUint32(12, cd, true); end.setUint32(16, offset, true);
+  const all = parts.concat(central, [new Uint8Array(end.buffer)]);
+  const out = new Uint8Array(all.reduce((a, b) => a + b.length, 0)); let p = 0;
+  for (const a of all) { out.set(a, p); p += a.length; }
+  return out;
+}
+function makeXlsx(sheets){
+  const R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+  const P = "http://schemas.openxmlformats.org/package/2006/relationships";
+  const files = [
+    {name:"[Content_Types].xml", text: XML + `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>` +
+      sheets.map((s, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("") + `</Types>`},
+    {name:"_rels/.rels", text: XML + `<Relationships xmlns="${P}"><Relationship Id="rId1" Type="${R}/officeDocument" Target="xl/workbook.xml"/></Relationships>`},
+    {name:"xl/workbook.xml", text: XML + `<workbook ${NS} xmlns:r="${R}"><bookViews><workbookView/></bookViews><sheets>` + sheets.map((s, i) => `<sheet name="${xesc(s.name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join("") + `</sheets></workbook>`},
+    {name:"xl/_rels/workbook.xml.rels", text: XML + `<Relationships xmlns="${P}">` + sheets.map((s, i) => `<Relationship Id="rId${i + 1}" Type="${R}/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join("") +
+      `<Relationship Id="rId${sheets.length + 1}" Type="${R}/styles" Target="styles.xml"/></Relationships>`},
+    {name:"xl/styles.xml", text: STYLES}
+  ].concat(sheets.map((s, i) => ({name:`xl/worksheets/sheet${i + 1}.xml`, text: sheetXml(s)})));
+  return zip(files);
+}
+// One worksheet per paper sheet, laid out like the paper.
+function dayBook(date, docs){
+  return GROUPS.map((grp, g) => {
+    const sw = swtIn(docs, g); const rows = [];
+    rows.push([{v:"DCR Operator Log Sheet", s:1}]);
+    rows.push([{v:"Date: " + dmy(date), s:6}, null, null, {v:"Sea Water Temperature: " + (sw === null ? "" : fmt(sw) + " °C"), s:6}]);
+    const h1 = [{v:"Sl. #", s:2},{v:"Description", s:2},{v:"Unit", s:2}], h2 = [{v:"", s:2},{v:"", s:2},{v:"", s:2}];
+    grp.forEach(u => SLOTS.forEach((sl, i) => { h1.push({v: i ? "" : u, s:2}); h2.push({v:SLOT_LABEL[sl], s:2}); }));
+    rows.push(h1, h2);
+    for (const it of ITEMS) {
+      const r = [{v:it[0], s:3},{v:it[1], s:4},{v:it[2], s:3}];
+      grp.forEach(u => SLOTS.forEach(sl => { const e = entryIn(docs, u, sl); const x = e ? e.v[it[0]] : null; r.push({v: isNum(x) ? x : (e && e.st === "run" ? "—" : ""), s: it[3] ? 5 : 3}); }));
+      rows.push(r);
+    }
+    const foot = (label, fn) => { const r = [{v:"", s:3},{v:label, s:4},{v:"", s:3}]; grp.forEach(u => SLOTS.forEach(sl => r.push({v: fn(entryIn(docs, u, sl)), s:3}))); rows.push(r); };
+    foot("Shift", e => e ? e.s : ""); foot("Status", e => e ? STATUS_EN[e.st] : "");
+    const merges = ["A1:" + colName(2 + grp.length * 6) + "1", "A3:A4", "B3:B4", "C3:C4"].concat(grp.map((u, k) => colName(3 + k * 6) + "3:" + colName(8 + k * 6) + "3"));
+    return {name: grp[0] + "-" + grp[3], rows, merges, cols:[6, 34, 9].concat(Array(grp.length * 6).fill(8)), freeze:[3, 4]};
+  });
+}
+// One worksheet per distiller, one row per recorded reading.
+function monthBook(list){
+  const by = {};
+  for (const d of list) { if (!d || typeof d.date !== "string" || !Number.isInteger(d.g)) continue; (by[d.date] = by[d.date] || {})[d.g] = d; }
+  const dates = Object.keys(by).sort();
+  const head = ["Date","Time","Shift","Status","Sea Water Temp (°C)"].concat(ITEMS.map(it => it[0] + " " + it[1] + " (" + it[2] + ")")).map(v => ({v, s:2}));
+  return UNITS.map(u => {
+    const rows = [head];
+    for (const date of dates) for (const sl of SLOTS) {
+      const e = entryIn(by[date], u, sl); if (!e) continue;
+      rows.push([{v:date, s:3},{v:SLOT_LABEL[sl], s:3},{v:e.s, s:3},{v:STATUS_EN[e.st], s:3},{v:swtIn(by[date], groupOf(u)), s:3}].concat(ITEMS.map(it => ({v:e.v[it[0]], s: it[3] ? 5 : 3}))));
+    }
+    return {name:u, rows, cols:[12, 8, 7, 8, 20].concat(ITEMS.map(it => Math.max(14, it[1].length + it[2].length + 7))), freeze:[2, 1]};
+  });
+}
+function xmsg(t, good){ const el = $("xmsg"); el.textContent = t || ""; el.classList.toggle("good", !!good); }
+function download(filename, u8){
+  const url = URL.createObjectURL(new Blob([u8], {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
+  const a = document.createElement("a"); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  xmsg("نزل الملف: " + filename, true);
+}
+function exportDay(){ xmsg(""); download("DCR-Log-" + S.date + ".xlsx", makeXlsx(dayBook(S.date, S.docs))); }
+async function exportMonth(){
+  if (!db) return;
+  const btn = $("x-month"); btn.disabled = true; xmsg("");
+  try {
+    const month = monthOf(S.date); const list = [];
+    const snap = await FB.getDocs(FB.query(FB.collection(db, "sheets"), FB.where("month", "==", month)));
+    snap.forEach(d => { const x = d.data(); if (x) list.push(x); });
+    if (!list.length) xmsg("ما في قراءات مسجلة بهالشهر.");
+    else download("DCR-Log-" + month + ".xlsx", makeXlsx(monthBook(list)));
+  } catch (err) { xmsg("ما قدرنا نجيب قراءات الشهر. جرّب مرة ثانية."); }
+  finally { btn.disabled = false; }
+}
+async function copySheet(){
+  const grp = GROUPS[S.group]; const lines = [];
+  lines.push(["Sl.#","Description","Unit"].concat(...grp.map(u => SLOTS.map(sl => u + " " + SLOT_LABEL[sl]))).join("\t"));
+  for (const it of ITEMS) lines.push([it[0], it[1], it[2]].concat(...grp.map(u => SLOTS.map(sl => { const e = entryOf(u, sl); return e && isNum(e.v[it[0]]) ? fmt(e.v[it[0]], it[3]) : ""; }))).join("\t"));
+  lines.push(["","Shift",""].concat(...grp.map(u => SLOTS.map(sl => { const e = entryOf(u, sl); return e ? e.s : ""; }))).join("\t"));
+  try { await navigator.clipboard.writeText(lines.join("\n")); xmsg("انسخت الورقة. الصقها بالإكسل.", true); }
+  catch (e) { xmsg("المتصفح ما سمح بالنسخ."); }
+}
+
+/* ---------- notices ---------- */
+function renderConn(){
+  const el = $("conn"); let st = "loading", t = "يتصل…";
+  if (S.failed) { st = "off"; t = "مشكلة بالاتصال"; }
+  else if (S.loaded) { if (S.stale) { st = "ro"; t = "بدون نت"; } else { st = "ok"; t = "متصل"; } }
+  el.dataset.state = st; el.textContent = t;
+}
+function renderNotice(){
+  const el = $("notice"); let t = "", kind = "warn";
+  if (S.fatal) { t = S.fatal; kind = "bad"; }
+  else if (S.failed === "permission-denied") { t = "قاعدة البيانات رفضت هالحساب. المشرف يتأكد إن قواعد الحماية (Rules) منسوخة من ملف firestore.rules."; kind = "bad"; }
+  else if (S.failed) { t = "ما قدرنا نجيب القراءات. حدّث الصفحة وجرّب مرة ثانية."; kind = "bad"; }
+  else if (S.stale) t = "ما في نت الحين. اللي تسجله ينحفظ على الجهاز ويرتفع أول ما يرجع الاتصال، فلا تسكر الصفحة.";
+  el.hidden = !t; el.textContent = t; el.dataset.kind = kind;
+}
+function fatal(t){ S.fatal = t; $("loading").hidden = true; renderNotice(); }
+
+/* ---------- data ---------- */
+let unsub = null, unsubCfg = null, staleT = 0;
+function stopData(){
+  for (const u of [unsub, unsubCfg]) { if (u) { try { u(); } catch (e) {} } }
+  unsub = null; unsubCfg = null; clearTimeout(staleT); staleT = 0;
+  S.docs = {}; S.loaded = false; S.stale = false; S.failed = ""; S.week = {key:"", by:{}};
+}
+function subscribe(){
+  if (unsub) { try { unsub(); } catch (e) {} unsub = null; }
+  S.docs = {}; S.loaded = false; S.failed = "";
+  onData();
+  if (!db || !S.role || !S.date) return;
+  const date = S.date;
+  unsub = FB.onSnapshot(FB.query(FB.collection(db, "sheets"), FB.where("date", "==", date)), {includeMetadataChanges:true}, snap => {
+    if (date !== S.date) return;
+    const docs = {};
+    snap.forEach(d => { const x = d.data(); if (x && Number.isInteger(x.g) && x.g >= 0 && x.g < GROUPS.length) docs[x.g] = x; });
+    S.docs = docs; S.loaded = true;
+    if (snap.metadata && snap.metadata.fromCache) {
+      if (!staleT && !S.stale) staleT = setTimeout(() => { staleT = 0; S.stale = true; renderConn(); renderNotice(); }, 6000);
+    } else { clearTimeout(staleT); staleT = 0; S.stale = false; }
+    onData();
+  }, err => { if (date !== S.date) return; S.loaded = true; S.failed = (err && err.code) || "error"; onData(); });
+}
+function subscribeCfg(){
+  if (unsubCfg) { try { unsubCfg(); } catch (e) {} }
+  unsubCfg = FB.onSnapshot(FB.doc(db, "config", "main"), snap => {
+    S.cfg = cleanCfg(snap.exists() ? snap.data() : null);
+    renderSettings();
+    if (S.role === "shift") applyClock(false); else if (S.date) renderDate();
+  }, () => {});
+}
+function onData(){
+  renderUnits();
+  if (!S.form.dirty && !S.form.swtDirty && !S.form.saving) fillForm(); else { renderPrev(); renderMeta(); }
+  if (S.view === "review") renderReview();
+  renderConn(); renderNotice();
+}
+// A write that the server has not confirmed after 8 s is waiting for the network: it is kept on
+// the device and sent when the connection returns.
+function commit(p){
+  let queued = false;
+  p.catch(err => { if (queued) { S.failed = (err && err.code) || "error"; renderConn(); renderNotice(); } });
+  return Promise.race([p.then(() => "ok"), sleep(8000).then(() => { queued = true; return "queued"; })]);
+}
+function setSaving(on){ S.form.saving = on; renderMeta(); }
+async function onSave(ev){
+  ev.preventDefault();
+  if (S.form.saving || !db || !S.role) return;
+  if (!S.shift) { fmsg("اختر الشفت أول."); $("seg-shift").scrollIntoView({block:"center"}); return; }
+  const v = {}; let filled = 0, firstBad = null;
+  for (const it of ITEMS) {
+    const el = $("v" + it[0]); const r = normNum(el.value);
+    $("r" + it[0]).classList.toggle("bad", !r.ok);
+    if (!r.ok && !firstBad) firstBad = el;
+    v[it[0]] = r.v; if (r.v !== null) filled++;
+  }
+  const sw = normNum($("swt").value); $("swt").classList.toggle("bad", !sw.ok);
+  if (firstBad || !sw.ok) { fmsg("في خانة قيمتها مو رقم. صحّحها وبعدين احفظ."); (firstBad || $("swt")).focus(); return; }
+  if (S.form.st === "run" && !filled) return fmsg("اكتب قراءة وحدة على الأقل، أو غيّر حالة المقطرة إذا كانت واقفة.");
+  const unit = S.unit, slot = S.slot, date = S.date, g = groupOf(unit);
+  const entry = {s:S.shift, st:S.form.st, v, by: S.role === "admin" ? "admin" : "shift-" + S.shift.toLowerCase(), at:Date.now()};
+  const data = {date, month:monthOf(date), g, u:{[unit]:{[slot]:entry}}};
+  if (S.form.swtDirty) data.swt = sw.v;
+  fmsg(""); setSaving(true);
+  try {
+    // merge: only this distiller and time are written, so two people saving on one sheet never overwrite each other
+    const how = await commit(FB.setDoc(FB.doc(db, "sheets", sheetId(date, g)), data, {merge:true}));
+    S.form.dirty = false; S.form.swtDirty = false; S.form.saving = false;
+    toast(how === "ok" ? "انحفظت قراءة " + unit + " الساعة " + SLOT_LABEL[slot] : "انحفظت على الجهاز، وبترتفع أول ما يرجع النت");
+    if (S.unit === unit && S.slot === slot && S.date === date) {
+      const block = g < 2 ? UNITS.slice(0, 8) : UNITS.slice(8);
+      const i = block.indexOf(unit);
+      const next = block.slice(i + 1).concat(block.slice(0, i)).find(u => !entryOf(u, slot));
+      if (next) { pickUnit(next, true); window.scrollTo({top: $("form").offsetTop - 70}); $("v1").focus({preventScroll:true}); }
+      else { for (const it of ITEMS) $("v" + it[0]).value = fmt(v[it[0]], it[3]); fmsg("كل مقطرات " + (g < 2 ? "DCR 1" : "DCR 2") + " مسجلة لهالوقت.", true); }
+    }
+  } catch (err) { fmsg(errText(err)); }
+  finally { setSaving(false); }
+}
+let delArmed = 0;
+function resetDel(){ clearTimeout(delArmed); delArmed = 0; $("del").textContent = "مسح القراءة"; }
+async function onDelete(){
+  if (S.form.saving || !db) return;
+  if (!delArmed) { $("del").textContent = "متأكد؟ اضغط مرة ثانية"; delArmed = setTimeout(resetDel, 4000); return; }
+  resetDel();
+  const unit = S.unit, slot = S.slot, date = S.date, g = groupOf(unit);
+  setSaving(true);
+  try {
+    await commit(FB.setDoc(FB.doc(db, "sheets", sheetId(date, g)), {date, month:monthOf(date), g, u:{[unit]:{[slot]:FB.deleteField()}}}, {merge:true}));
+    S.form.dirty = false; S.form.swtDirty = false; S.form.saving = false;
+    toast("انمسحت قراءة " + unit + " الساعة " + SLOT_LABEL[slot]); onData();
+  } catch (err) { fmsg(errText(err)); }
+  finally { setSaving(false); }
+}
+
+/* ---------- selection ---------- */
+let discardKey = "", discardT = 0;
+// Typed-but-unsaved readings are only dropped on a second press.
+function okToLeave(key){
+  if (!S.form.dirty && !S.form.swtDirty) return true;
+  if (discardKey === key) { discardKey = ""; return true; }
+  discardKey = key; clearTimeout(discardT); discardT = setTimeout(() => { discardKey = ""; }, 4000);
+  toast("قراءة " + S.unit + " ما انحفظت. اضغط مرة ثانية إذا تبي تتركها.");
+  return false;
+}
+function pickUnit(u, force){
+  if (!UNITS.includes(u) || (!force && u !== S.unit && !okToLeave("u" + u))) return;
+  S.unit = u; S.group = groupOf(u); ls("dcr.unit", u); fmsg("");
+  renderUnits(); fillForm();
+}
+function pickSlot(sl, force){
+  if (!SLOTS.includes(sl) || (!force && sl !== S.slot && !okToLeave("s" + sl))) return;
+  S.slot = sl; fmsg(""); renderSegs(); renderUnits(); fillForm();
+}
+function pickDate(d, force){
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) { renderDate(); return; }
+  if (d === S.date) return;
+  if (!force && !okToLeave("d" + d)) { renderDate(); return; }
+  S.date = d; S.form.dirty = false; S.form.swtDirty = false; fmsg("");
+  renderDate(); subscribe();
+  if (S.view === "review") loadWeek();
+}
+// For a shift account the period and the sheet date follow the clock; only the reading time is chosen.
+function applyClock(force){
+  if (S.role !== "shift") return;
+  const c = clock();
+  if (S.late && !c.canLate) S.late = false;
+  const period = S.late ? c.prev : c.cur, date = sheetDateFor(period, c);
+  const moved = period !== S.ctx.period || date !== S.ctx.date;
+  const busy = S.form.dirty || S.form.swtDirty || S.form.saving;
+  if (moved && busy && !force) return;                    // let them finish what they are typing
+  S.ctx = {cur:c.cur, prev:c.prev, canLate:c.canLate, period, date};
+  if (S.view !== "entry") return;
+  const slots = PERIODS.find(p => p.k === period).slots;
+  let refill = moved;
+  if (!slots.includes(S.slot)) { S.slot = defaultSlot(period, c); refill = true; }
+  if (S.date !== date) { S.date = date; S.form.dirty = false; S.form.swtDirty = false; renderDate(); renderSegs(); subscribe(); return; }
+  renderSegs();
+  if (refill) { S.form.dirty = false; S.form.swtDirty = false; renderUnits(); fillForm(); }
+}
+function setView(v){
+  S.view = v;
+  $("view-entry").hidden = v !== "entry"; $("view-review").hidden = v !== "review";
+  $("tab-entry").setAttribute("aria-selected", v === "entry"); $("tab-review").setAttribute("aria-selected", v === "review");
+  const fixed = S.role === "shift" && v === "entry";
+  $("datebox").hidden = fixed; $("ctxline").hidden = !fixed;
+  if (v === "review") { renderReview(); loadWeek(); }
+  else if (S.role === "shift") applyClock(true);
+}
+
+/* ---------- dashboard extras (admin) ---------- */
+async function loadWeek(){
+  if (S.role !== "admin" || !db || !S.date) return;
+  const end = S.date;
+  try {
+    const snap = await FB.getDocs(FB.query(FB.collection(db, "sheets"), FB.where("date", ">=", addDays(end, -6)), FB.where("date", "<=", end)));
+    const by = {};
+    snap.forEach(d => { const x = d.data(); if (x && typeof x.date === "string" && Number.isInteger(x.g)) (by[x.date] = by[x.date] || {})[x.g] = x; });
+    if (end === S.date) { S.week = {key:end, by}; renderWeek(); }
+  } catch (e) {}
+}
+function renderWeek(){
+  if (S.role !== "admin") return;
+  let h = `<thead><tr><th rowspan="2" class="uh">Date</th>` + PERIODS.map(p => `<th colspan="2" class="ph">${p.ar}</th>`).join("") +
+    `<th rowspan="2">Total</th></tr><tr>` + SLOTS.map(s => `<th>${SLOT_LABEL[s]}</th>`).join("") + `</tr></thead><tbody>`;
+  for (let i = 0; i < 7; i++) {
+    const date = addDays(S.date, -i);
+    const docs = i === 0 ? S.docs : ((S.week.key === S.date && S.week.by[date]) || {});
+    let total = 0;
+    const cells = SLOTS.map(sl => {
+      let n = 0; const sh = new Set();
+      for (const u of UNITS) { const e = entryIn(docs, u, sl); if (e) { n++; if (e.s) sh.add(e.s); } }
+      total += n;
+      return `<td class="wk ${n === UNITS.length ? "full" : (n ? "part" : "none")}"><span class="wn">${n}</span>` +
+        [...sh].sort().map(s => `<span class="chip" style="--h:${HUE[s]}">${s}</span>`).join("") + `</td>`;
+    }).join("");
+    h += `<tr><th scope="row" class="uh"><button type="button" class="wd" data-date="${date}">${dmy(date).slice(0, 5)}</button></th>${cells}<td class="wt">${total}/${TOTAL}</td></tr>`;
+  }
+  $("week").innerHTML = h + `</tbody>`;
+}
+let setDirty = false;
+function renderSettings(){
+  if (setDirty) return;
+  for (const k of ORDER) $("set-" + k).value = String(S.cfg.starts[k]);
+  $("set-g").value = String(S.cfg.grace);
+}
+async function onSettings(ev){
+  ev.preventDefault();
+  const el = $("smsg"); const say = (t, good) => { el.textContent = t; el.classList.toggle("good", !!good); };
+  const starts = {m:Number($("set-m").value), a:Number($("set-a").value), n:Number($("set-n").value)};
+  const grace = Number($("set-g").value);
+  if (!validStarts(starts)) return say("المواعيد لازم تكون بالترتيب: الصبح، بعده العصر، بعده الليل.");
+  if (!Number.isInteger(grace) || grace < 0 || grace > 240) return say("المهلة من 0 إلى 240 دقيقة.");
+  $("set-save").disabled = true; say("");
+  try { await commit(FB.setDoc(FB.doc(db, "config", "main"), {starts, grace})); setDirty = false; say("انحفظت المواعيد.", true); }
+  catch (err) { say(errText(err)); }
+  finally { $("set-save").disabled = false; }
+}
+
+/* ---------- sign-in ---------- */
+const ACCS = SHIFTS.map(s => ({k:s, t:s})).concat([{k:"admin", t:"المشرف"}]);
+const emailOf = k => (k === "admin" ? "admin" : "shift-" + k.toLowerCase()) + "@" + DOMAIN;
+function renderAcc(){ seg("seg-acc", ACCS, S.acc, "acc"); }
+function showLogin(){
+  $("loading").hidden = true; $("app").hidden = true; $("who").hidden = true; $("view-login").hidden = false;
+  renderAcc(); lmsg(S.loginMsg); S.loginMsg = "";
+}
+function loginError(err){
+  const c = (err && err.code) || "";
+  if (/too-many-requests/.test(c)) return "محاولات وايد. انطر كم دقيقة وجرّب مرة ثانية.";
+  if (/network-request-failed/.test(c)) return "ما في نت. تأكد من الاتصال وجرّب مرة ثانية.";
+  if (/user-disabled/.test(c)) return "هالحساب موقوف. كلّم المشرف.";
+  if (/operation-not-allowed|configuration-not-found/.test(c)) return "الدخول بكلمة السر مو مفعّل بـFirebase. المشرف يفعّل Email/Password.";
+  if (/api-key/.test(c)) return "بيانات Firebase بملف config.js فيها غلط.";
+  return "كلمة السر غلط، أو الحساب مو مضاف.";
+}
+async function onLogin(ev){
+  ev.preventDefault();
+  if (!auth) return;
+  const pass = $("pass").value;
+  if (!pass) return lmsg("اكتب كلمة السر.");
+  $("login").disabled = true; lmsg("");
+  try { await FB.signInWithEmailAndPassword(auth, emailOf(S.acc), pass); $("pass").value = ""; ls("dcr.acc", S.acc); }
+  catch (err) { lmsg(loginError(err)); }
+  finally { $("login").disabled = false; }
+}
+function onAuth(user){
+  stopData();
+  if (!user) { S.role = null; showLogin(); return; }
+  const email = String(user.email || "").toLowerCase();
+  const m = /^shift-([a-z])@(.+)$/.exec(email);
+  if (m && m[2] === DOMAIN && SHIFTS.includes(m[1].toUpperCase())) { S.role = "shift"; S.shift = m[1].toUpperCase(); }
+  else if (email === "admin@" + DOMAIN) S.role = "admin";
+  else { S.role = null; S.loginMsg = "هالحساب مو معرّف بالبرنامج."; FB.signOut(auth).catch(() => {}); return; }
+  startApp();
+}
+function startApp(){
+  const admin = S.role === "admin";
+  document.body.dataset.role = S.role;
+  $("loading").hidden = true; $("view-login").hidden = true; $("app").hidden = false; $("who").hidden = false;
+  const b = $("badge");
+  b.textContent = admin ? "المشرف" : "شفت " + S.shift;
+  b.style.setProperty("--h", admin ? "200" : String(HUE[S.shift]));
+  b.classList.toggle("adm", admin);
+  for (const id of ["weekcard", "setcard", "x-day", "x-month"]) $(id).hidden = !admin;
+  S.late = false; S.form.dirty = false; S.form.swtDirty = false; setDirty = false; fmsg("");
+  S.ctx = {cur:"", prev:"", canLate:false, period:"", date:""};
+  subscribeCfg(); renderSettings();
+  if (admin) {
+    const c = clock(); const sh = ls("dcr.shift");
+    S.shift = SHIFTS.includes(sh) ? sh : null;
+    S.date = sheetDateFor(c.cur, c); S.slot = defaultSlot(c.cur, c);
+    renderDate(); renderSegs(); setView("review"); subscribe();
+  } else { S.date = ""; S.slot = ""; setView("entry"); }
+}
+
+/* ---------- events ---------- */
+function wire(){
+  const on = (id, ev, fn) => $(id).addEventListener(ev, fn);
+  const pressed = (ev, attr) => { const b = ev.target.closest("button[data-" + attr + "]"); return b ? b.getAttribute("data-" + attr) : null; };
+  on("seg-acc", "click", ev => { const k = pressed(ev, "acc"); if (!k) return; S.acc = k; renderAcc(); lmsg(""); $("pass").focus(); });
+  on("loginform", "submit", onLogin);
+  on("logout", "click", () => { if (auth && okToLeave("logout")) FB.signOut(auth).catch(() => {}); });
+  on("seg-shift", "click", ev => { const k = pressed(ev, "shift"); if (!k || S.role !== "admin") return; S.shift = k; ls("dcr.shift", k); fmsg(""); renderSegs(); });
+  on("seg-period", "click", ev => {
+    const k = pressed(ev, "period"); if (!k) return;
+    if (S.role === "admin") { const p = PERIODS.find(x => x.k === k); if (!p.slots.includes(S.slot)) pickSlot(p.slots[0]); return; }
+    const late = k !== S.ctx.cur;
+    if (late === S.late || (late && !S.ctx.canLate) || !okToLeave("p" + k)) return;
+    S.late = late; S.form.dirty = false; S.form.swtDirty = false; applyClock(true);
+  });
+  on("seg-slot", "click", ev => { const k = pressed(ev, "slot"); if (k) pickSlot(k); });
+  on("seg-status", "click", ev => { const k = pressed(ev, "st"); if (!k) return; S.form.st = k; S.form.dirty = true; renderStatus(); });
+  on("units", "click", ev => { const k = pressed(ev, "unit"); if (k) pickUnit(k); });
+  on("seg-group", "click", ev => { const k = pressed(ev, "group"); if (k === null) return; S.group = Number(k); renderSheet(); });
+  on("matrix", "click", ev => {
+    const b = ev.target.closest("button[data-unit]"); if (!b) return;
+    const u = b.getAttribute("data-unit"), sl = b.getAttribute("data-slot");
+    if (S.role === "shift") {
+      const c = clock(); const per = periodOf(sl).k;
+      const mine = (per === c.cur || (c.canLate && per === c.prev)) && sheetDateFor(per, c) === S.date;
+      if (!mine) return toast("هالخانة للعرض بس. تسجيلك يكون لفترتك الحالية.");
+      S.late = per !== c.cur;
+    }
+    if ((u !== S.unit || sl !== S.slot) && !okToLeave("m" + u + sl)) return;
+    S.unit = u; S.group = groupOf(u); S.slot = sl; ls("dcr.unit", u);
+    S.form.dirty = false; S.form.swtDirty = false;
+    setView("entry"); renderSegs(); renderUnits(); fillForm();
+    window.scrollTo({top: $("form").offsetTop - 70});
+  });
+  on("week", "click", ev => { const b = ev.target.closest("button[data-date]"); if (b) { pickDate(b.getAttribute("data-date")); window.scrollTo({top:0}); } });
+  on("rows", "input", () => { S.form.dirty = true; });
+  on("swt", "input", () => { S.form.swtDirty = true; });
+  on("form", "keydown", ev => {
+    if (ev.key !== "Enter" || !ev.target.classList || !ev.target.classList.contains("num-in")) return;
+    ev.preventDefault();
+    const ins = [$("swt")].concat(ITEMS.map(it => $("v" + it[0]))); const i = ins.indexOf(ev.target);
+    if (i >= 0 && i < ins.length - 1) { ins[i + 1].focus(); ins[i + 1].select(); } else $("save").focus();
+  });
+  on("form", "submit", onSave);
+  on("del", "click", onDelete);
+  on("date", "change", ev => pickDate(ev.target.value));
+  on("d-prev", "click", () => pickDate(addDays(S.date, -1)));
+  on("d-next", "click", () => pickDate(addDays(S.date, 1)));
+  on("d-today", "click", () => pickDate(todaySheet()));
+  on("tab-entry", "click", () => setView("entry"));
+  on("tab-review", "click", () => setView("review"));
+  on("x-day", "click", exportDay); on("x-month", "click", exportMonth); on("x-copy", "click", copySheet);
+  on("setcard", "input", () => { setDirty = true; });
+  on("setcard", "submit", onSettings);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) applyClock(false); });
+}
+
+/* ---------- boot ---------- */
+async function boot(){
+  if (CFG.title) { document.title = CFG.title; $("title").textContent = CFG.title; }
+  buildRows();
+  for (const k of ORDER) $("set-" + k).innerHTML = Array.from({length:24}, (x, h) => `<option value="${h}">${pad(h)}:00</option>`).join("");
+  wire();
+  const fc = CFG.firebase || {};
+  if (!fc.apiKey || !fc.projectId) return fatal("البرنامج مو مربوط بقاعدة البيانات للحين. عبّي بيانات Firebase بملف config.js.");
+  try {
+    const m = await Promise.all([import(SDK + "firebase-app.js"), import(SDK + "firebase-auth.js"), import(SDK + "firebase-firestore.js")]);
+    FB = Object.assign({}, m[0], m[1], m[2]);
+  } catch (e) { return fatal("ما قدرنا نحمّل البرنامج. تأكد من النت وحدّث الصفحة."); }
+  try { const app = FB.initializeApp(fc); auth = FB.getAuth(app); db = FB.getFirestore(app); }
+  catch (e) { return fatal("بيانات Firebase بملف config.js فيها غلط."); }
+  FB.onAuthStateChanged(auth, onAuth);
+  setInterval(() => applyClock(false), 30000);
+}
+boot();
+</script>
+</body>
+</html>
