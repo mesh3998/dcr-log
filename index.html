@@ -319,7 +319,7 @@ body[data-role="shift"] .dcrs{grid-template-columns:1fr}
         <div class="actions">
           <button type="submit" class="primary" id="save">المقطرة التالية</button>
           <button type="button" class="danger" id="del" hidden>مسح القراءة</button>
-          <p class="fmsg note" id="fmsg" role="status">القراءة تنحفظ تلقائياً وإنت تكتب.</p>
+          <p class="fmsg note" id="fmsg" role="status">الحفظ تلقائي</p>
         </div>
       </form>
     </section>
@@ -938,7 +938,7 @@ function setSaving(on){ S.form.saving = on; renderMeta(); }
 /* ---------- autosave ---------- */
 // Readings are stored a moment after typing stops, and before moving to another distiller, time or day.
 // Nobody has to press a save button.
-const AUTO_NOTE = "القراءة تنحفظ تلقائياً وإنت تكتب.";
+const AUTO_NOTE = "الحفظ تلقائي";
 let saveT = 0, savingP = null;
 function stat(t, kind){ const el = $("fmsg"); el.textContent = t || ""; el.classList.toggle("good", kind === "good"); el.classList.toggle("note", kind === "note"); }
 function touchForm(swt){
