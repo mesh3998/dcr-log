@@ -142,6 +142,7 @@ form.idle .rows{opacity:.55}
 .danger{min-height:44px;padding:0 14px;border:1px solid var(--bad);border-radius:8px;background:transparent;color:var(--bad)}
 .fmsg{margin:0;font-size:.875rem;color:var(--bad);flex:1 1 220px}
 .fmsg.good{color:var(--ok)}
+.fmsg.note{color:var(--muted)}
 
 .tiles{display:grid;grid-template-columns:1.3fr repeat(3,1fr);gap:12px}
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
@@ -316,9 +317,9 @@ body[data-role="shift"] .dcrs{grid-template-columns:1fr}
         <p class="hint" id="prevhint" hidden></p>
         <div class="rows" id="rows" dir="ltr"></div>
         <div class="actions">
-          <button type="submit" class="primary" id="save">حفظ القراءة</button>
+          <button type="submit" class="primary" id="save">المقطرة التالية</button>
           <button type="button" class="danger" id="del" hidden>مسح القراءة</button>
-          <p class="fmsg" id="fmsg" role="alert"></p>
+          <p class="fmsg note" id="fmsg" role="status">القراءة تنحفظ تلقائياً وإنت تكتب.</p>
         </div>
       </form>
     </section>
@@ -451,7 +452,7 @@ const S = {
   cfg:{starts:{m:7, a:15, n:23}, grace:60, exported:""}, monthly:"",
   ctx:{cur:"", prev:"", canLate:false, period:"", date:""},
   docs:{}, loaded:false, stale:false, failed:"", week:{key:"", by:{}},
-  form:{dirty:false, swtDirty:false, saving:false, st:"run"}
+  form:{dirty:false, swtDirty:false, saving:false, st:"run", rev:0, key:"", filledFor:""}
 };
 let FB = null, auth = null, db = null;
 (() => {
@@ -514,7 +515,6 @@ function cleanCfg(x){
 /* ---------- toast / messages ---------- */
 let toastT = 0;
 function toast(t){ const el = $("toast"); el.textContent = t; el.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("show"), 3400); }
-function fmsg(t, good){ const el = $("fmsg"); el.textContent = t || ""; el.classList.toggle("good", !!good); }
 function lmsg(t){ $("lmsg").textContent = t || ""; }
 function errText(err){
   const c = (err && err.code) || "";
@@ -612,8 +612,6 @@ function renderMeta(){
     if (e.by === "admin") t += " · دخلها المشرف";
   }
   $("fmeta").textContent = t;
-  $("save").textContent = S.form.saving ? "يحفظ…" : (e ? "حفظ التعديل" : "حفظ القراءة");
-  $("save").disabled = S.form.saving;
   $("del").hidden = !(e && (S.role === "admin" || e.s === S.shift));
 }
 function fillForm(){
@@ -624,6 +622,7 @@ function fillForm(){
   $("swt").value = fmt(swtIn(S.docs, g)); $("swt").classList.remove("bad");
   $("swtg").textContent = "sheet " + GROUP_LABEL[g];
   S.form.dirty = false; S.form.swtDirty = false;
+  S.form.key = S.date + "|" + S.unit + "|" + S.slot; S.form.filledFor = S.form.key + "|" + (S.loaded ? 1 : 0);
   $("fh-unit").textContent = S.unit; $("fh-slot").textContent = SLOT_LABEL[S.slot];
   resetDel(); renderStatus(); renderPrev(); renderMeta();
 }
@@ -919,7 +918,11 @@ function subscribeCfg(){
 }
 function onData(){
   renderUnits();
-  if (!S.form.dirty && !S.form.swtDirty && !S.form.saving) fillForm(); else { renderPrev(); renderMeta(); }
+  // Do not rewrite a field the person is typing in: refill only when nothing is being edited,
+  // or when the form now stands for another distiller, time or day.
+  const a = document.activeElement, editing = !!(a && a.classList && a.classList.contains("num-in") && $("form").contains(a));
+  const same = S.form.filledFor === S.date + "|" + S.unit + "|" + S.slot + "|" + (S.loaded ? 1 : 0);
+  if (!S.form.dirty && !S.form.swtDirty && !S.form.saving && !(editing && same)) fillForm(); else { renderPrev(); renderMeta(); }
   if (S.view === "review") renderReview();
   renderConn(); renderNotice();
 }
@@ -931,10 +934,20 @@ function commit(p){
   return Promise.race([p.then(() => "ok"), sleep(8000).then(() => { queued = true; return "queued"; })]);
 }
 function setSaving(on){ S.form.saving = on; renderMeta(); }
-async function onSave(ev){
-  ev.preventDefault();
-  if (S.form.saving || !db || !S.role) return;
-  if (!S.shift) { fmsg("اختر الشفت أول."); $("seg-shift").scrollIntoView({block:"center"}); return; }
+
+/* ---------- autosave ---------- */
+// Readings are stored a moment after typing stops, and before moving to another distiller, time or day.
+// Nobody has to press a save button.
+const AUTO_NOTE = "القراءة تنحفظ تلقائياً وإنت تكتب.";
+let saveT = 0, savingP = null;
+function stat(t, kind){ const el = $("fmsg"); el.textContent = t || ""; el.classList.toggle("good", kind === "good"); el.classList.toggle("note", kind === "note"); }
+function touchForm(swt){
+  if (swt) S.form.swtDirty = true; else S.form.dirty = true;
+  S.form.rev++;
+  clearTimeout(saveT); saveT = setTimeout(saveNow, 1500);
+  stat("تنحفظ أول ما توقف الكتابة…", "note");
+}
+function readForm(){
   const v = {}; let filled = 0, firstBad = null;
   for (const it of ITEMS) {
     const el = $("v" + it[0]); const r = normNum(el.value);
@@ -943,27 +956,60 @@ async function onSave(ev){
     v[it[0]] = r.v; if (r.v !== null) filled++;
   }
   const sw = normNum($("swt").value); $("swt").classList.toggle("bad", !sw.ok);
-  if (firstBad || !sw.ok) { fmsg("في خانة قيمتها مو رقم. صحّحها وبعدين احفظ."); (firstBad || $("swt")).focus(); return; }
-  if (S.form.st === "run" && !filled) return fmsg("اكتب قراءة وحدة على الأقل، أو غيّر حالة المقطرة إذا كانت واقفة.");
-  const unit = S.unit, slot = S.slot, date = S.date, g = groupOf(unit);
-  const entry = {s:S.shift, st:S.form.st, v, by: S.role === "admin" ? "admin" : S.dcr + S.shift.toLowerCase(), at:Date.now()};
-  const data = {date, month:monthOf(date), g, u:{[unit]:{[slot]:entry}}};
-  if (S.form.swtDirty) data.swt = sw.v;
-  fmsg(""); setSaving(true);
+  return {bad: !!firstBad || !sw.ok, v, filled, sw: sw.v};
+}
+async function doSave(){
+  if (!db || !S.role) return "error";
+  const key = S.form.key, rev = S.form.rev, unit = S.unit, slot = S.slot, date = S.date, g = groupOf(unit);
+  const f = readForm();
+  if (f.bad) { stat("في خانة قيمتها مو رقم. صحّحها عشان تنحفظ.", "bad"); return "invalid"; }
+  if (!S.shift) { stat("اختر الشفت أول عشان تنحفظ القراءة.", "bad"); $("seg-shift").classList.add("need"); return "noshift"; }
+  const data = {date, month:monthOf(date), g};
+  if (S.form.dirty && (f.filled || S.form.st !== "run"))
+    data.u = {[unit]:{[slot]:{s:S.shift, st:S.form.st, v:f.v, by: S.role === "admin" ? "admin" : S.dcr + S.shift.toLowerCase(), at:Date.now()}}};
+  if (S.form.swtDirty) data.swt = f.sw;
+  if (!data.u && !("swt" in data)) { if (S.form.rev === rev) S.form.dirty = false; stat(AUTO_NOTE, "note"); return "empty"; }
+  setSaving(true); stat("يحفظ…", "note");
   try {
     // merge: only this distiller and time are written, so two people saving on one sheet never overwrite each other
     const how = await commit(FB.setDoc(FB.doc(db, "sheets", sheetId(date, g)), data, {merge:true}));
-    S.form.dirty = false; S.form.swtDirty = false; S.form.saving = false;
-    toast(how === "ok" ? "انحفظت قراءة " + unit + " الساعة " + SLOT_LABEL[slot] : "انحفظت على الجهاز، وبترتفع أول ما يرجع النت");
-    if (S.unit === unit && S.slot === slot && S.date === date) {
-      const block = g < 2 ? UNITS.slice(0, 8) : UNITS.slice(8);
-      const i = block.indexOf(unit);
-      const next = block.slice(i + 1).concat(block.slice(0, i)).find(u => !entryOf(u, slot));
-      if (next) { pickUnit(next, true); window.scrollTo({top: $("form").offsetTop - 70}); $("v1").focus({preventScroll:true}); }
-      else { for (const it of ITEMS) $("v" + it[0]).value = fmt(v[it[0]], it[3]); fmsg("كل مقطرات " + (g < 2 ? "DCR 1" : "DCR 2") + " مسجلة لهالوقت.", true); }
+    if (S.form.key === key) {
+      if (S.form.rev === rev) { S.form.dirty = false; S.form.swtDirty = false; }
+      stat(how === "ok" ? "انحفظت " + unit + " الساعة " + SLOT_LABEL[slot] + " ✓" : "انحفظت على الجهاز، وبترتفع أول ما يرجع النت.", "good");
     }
-  } catch (err) { fmsg(errText(err)); }
-  finally { setSaving(false); }
+    return how;
+  } catch (err) {
+    if (S.form.key === key) stat(errText(err), "bad"); else toast("ما انحفظت قراءة " + unit + ". ارجع لها وتأكد منها.");
+    return "error";
+  } finally {
+    setSaving(false);
+    if (S.form.key === key && S.form.rev !== rev && (S.form.dirty || S.form.swtDirty)) { clearTimeout(saveT); saveT = setTimeout(saveNow, 600); }
+  }
+}
+function saveNow(){
+  clearTimeout(saveT); saveT = 0;
+  if (savingP) return savingP.then(() => (S.form.dirty || S.form.swtDirty) ? saveNow() : "ok");
+  if (!S.form.dirty && !S.form.swtDirty) return Promise.resolve("ok");
+  savingP = doSave().finally(() => { savingP = null; });
+  return savingP;
+}
+// Before moving elsewhere: store what was typed. Waits briefly and then moves on; a write still on
+// its way is kept by the device and finishes by itself.
+async function leave(){
+  if (!S.form.dirty && !S.form.swtDirty) return true;
+  const r = await Promise.race([saveNow(), sleep(1500).then(() => "slow")]);
+  if (r === "invalid") { toast("في خانة قيمتها مو رقم. صحّحها أو امسحها أول."); return false; }
+  if (r === "noshift") { toast("اختر الشفت أول عشان تنحفظ القراءة."); return false; }
+  return r !== "error";
+}
+async function onNext(ev){
+  ev.preventDefault();
+  if (!db || !S.role || !(await leave())) return;
+  const unit = S.unit, slot = S.slot, g = groupOf(unit);
+  const block = g < 2 ? UNITS.slice(0, 8) : UNITS.slice(8), i = block.indexOf(unit);
+  const next = block.slice(i + 1).concat(block.slice(0, i)).find(u => !entryOf(u, slot));
+  if (next) { await pickUnit(next, true); window.scrollTo({top: $("form").offsetTop - 70}); $("v1").focus({preventScroll:true}); }
+  else stat("كل مقطرات " + (g < 2 ? "DCR 1" : "DCR 2") + " مسجلة لهالوقت.", "good");
 }
 let delArmed = 0;
 function resetDel(){ clearTimeout(delArmed); delArmed = 0; $("del").textContent = "مسح القراءة"; }
@@ -972,39 +1018,33 @@ async function onDelete(){
   if (!delArmed) { $("del").textContent = "متأكد؟ اضغط مرة ثانية"; delArmed = setTimeout(resetDel, 4000); return; }
   resetDel();
   const unit = S.unit, slot = S.slot, date = S.date, g = groupOf(unit);
+  clearTimeout(saveT); saveT = 0;                        // nothing typed should be stored again after the delete
   setSaving(true);
   try {
     await commit(FB.setDoc(FB.doc(db, "sheets", sheetId(date, g)), {date, month:monthOf(date), g, u:{[unit]:{[slot]:FB.deleteField()}}}, {merge:true}));
     S.form.dirty = false; S.form.swtDirty = false; S.form.saving = false;
     toast("انمسحت قراءة " + unit + " الساعة " + SLOT_LABEL[slot]); onData();
-  } catch (err) { fmsg(errText(err)); }
+  } catch (err) { stat(errText(err), "bad"); }
   finally { setSaving(false); }
 }
 
 /* ---------- selection ---------- */
-let discardKey = "", discardT = 0;
-// Typed-but-unsaved readings are only dropped on a second press.
-function okToLeave(key){
-  if (!S.form.dirty && !S.form.swtDirty) return true;
-  if (discardKey === key) { discardKey = ""; return true; }
-  discardKey = key; clearTimeout(discardT); discardT = setTimeout(() => { discardKey = ""; }, 4000);
-  toast("قراءة " + S.unit + " ما انحفظت. اضغط مرة ثانية إذا تبي تتركها.");
-  return false;
+async function pickUnit(u, force){
+  if (!UNITS.includes(u)) return;
+  if (!force && u !== S.unit && !(await leave())) return;
+  S.unit = u; S.group = groupOf(u); ls("dcr.unit", u);
+  renderUnits(); fillForm(); stat(AUTO_NOTE, "note");
 }
-function pickUnit(u, force){
-  if (!UNITS.includes(u) || (!force && u !== S.unit && !okToLeave("u" + u))) return;
-  S.unit = u; S.group = groupOf(u); ls("dcr.unit", u); fmsg("");
-  renderUnits(); fillForm();
+async function pickSlot(sl, force){
+  if (!SLOTS.includes(sl)) return;
+  if (!force && sl !== S.slot && !(await leave())) return;
+  S.slot = sl; renderSegs(); renderUnits(); fillForm(); stat(AUTO_NOTE, "note");
 }
-function pickSlot(sl, force){
-  if (!SLOTS.includes(sl) || (!force && sl !== S.slot && !okToLeave("s" + sl))) return;
-  S.slot = sl; fmsg(""); renderSegs(); renderUnits(); fillForm();
-}
-function pickDate(d, force){
+async function pickDate(d, force){
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) { renderDate(); return; }
   if (d === S.date) return;
-  if (!force && !okToLeave("d" + d)) { renderDate(); return; }
-  S.date = d; S.form.dirty = false; S.form.swtDirty = false; fmsg("");
+  if (!force && !(await leave())) { renderDate(); return; }
+  S.date = d; S.form.dirty = false; S.form.swtDirty = false; stat(AUTO_NOTE, "note");
   renderDate(); subscribe();
   if (S.view === "review") loadWeek();
 }
@@ -1200,7 +1240,7 @@ function startApp(){
   b.style.setProperty("--h", admin ? "200" : String(HUE[S.shift]));
   b.classList.toggle("adm", admin);
   for (const id of ["weekcard", "setcard", "x-day", "x-month"]) $(id).hidden = !admin;
-  S.late = false; S.form.dirty = false; S.form.swtDirty = false; setDirty = false; fmsg("");
+  S.late = false; S.form.dirty = false; S.form.swtDirty = false; setDirty = false; stat(AUTO_NOTE, "note");
   S.ctx = {cur:"", prev:"", canLate:false, period:"", date:""};
   subscribeCfg(); renderSettings();
   if (admin) {
@@ -1218,42 +1258,50 @@ function wire(){
   on("seg-acc", "click", ev => { const k = pressed(ev, "acc"); if (!k) return; S.acc = k; renderAcc(); lmsg(""); $("pass").focus(); });
   on("seg-accdcr", "click", ev => { const k = pressed(ev, "accdcr"); if (!k) return; S.accDcr = Number(k); renderAcc(); lmsg(""); $("pass").focus(); });
   on("loginform", "submit", onLogin);
-  on("logout", "click", () => { if (auth && okToLeave("logout")) FB.signOut(auth).catch(() => {}); });
-  on("seg-shift", "click", ev => { const k = pressed(ev, "shift"); if (!k || S.role !== "admin") return; S.shift = k; ls("dcr.shift", k); fmsg(""); renderSegs(); });
-  on("seg-period", "click", ev => {
+  on("logout", "click", async () => {
+    if (!auth) return;
+    const r = await saveNow();                           // finish storing before the account is closed
+    if (r === "invalid" || r === "noshift" || r === "error") return;
+    if (r === "queued") return toast("في قراءات ما ارتفعت للحين لأن النت مقطوع. لا تطلع لين يرجع النت.");
+    FB.signOut(auth).catch(() => {});
+  });
+  on("seg-shift", "click", ev => { const k = pressed(ev, "shift"); if (!k || S.role !== "admin") return; S.shift = k; ls("dcr.shift", k); renderSegs(); if (S.form.dirty || S.form.swtDirty) saveNow(); else stat(AUTO_NOTE, "note"); });
+  on("seg-period", "click", async ev => {
     const k = pressed(ev, "period"); if (!k) return;
     if (S.role === "admin") { const p = PERIODS.find(x => x.k === k); if (!p.slots.includes(S.slot)) pickSlot(p.slots[0]); return; }
     const late = k !== S.ctx.cur;
-    if (late === S.late || (late && !S.ctx.canLate) || !okToLeave("p" + k)) return;
+    if (late === S.late || (late && !S.ctx.canLate) || !(await leave())) return;
     S.late = late; S.form.dirty = false; S.form.swtDirty = false; applyClock(true);
   });
   on("seg-slot", "click", ev => { const k = pressed(ev, "slot"); if (k) pickSlot(k); });
-  on("seg-status", "click", ev => { const k = pressed(ev, "st"); if (!k) return; S.form.st = k; S.form.dirty = true; renderStatus(); });
+  on("seg-status", "click", ev => { const k = pressed(ev, "st"); if (!k) return; S.form.st = k; renderStatus(); touchForm(false); });
   on("units", "click", ev => { const k = pressed(ev, "unit"); if (k) pickUnit(k); });
   on("seg-group", "click", ev => { const k = pressed(ev, "group"); if (k === null) return; S.group = Number(k); renderSheet(); });
-  on("matrix", "click", ev => {
+  on("matrix", "click", async ev => {
     const b = ev.target.closest("button[data-unit]"); if (!b) return;
     const u = b.getAttribute("data-unit"), sl = b.getAttribute("data-slot");
     if (S.role === "shift") {
       if (!canEdit(u, sl)) return toast("هالخانة للعرض بس. تسجيلك يكون لفترتك الحالية ولمقطرات قسمك.");
       S.late = periodOf(sl).k !== clock().cur;
     }
-    if ((u !== S.unit || sl !== S.slot) && !okToLeave("m" + u + sl)) return;
+    if ((u !== S.unit || sl !== S.slot) && !(await leave())) return;
     S.unit = u; S.group = groupOf(u); S.slot = sl; ls("dcr.unit", u);
     S.form.dirty = false; S.form.swtDirty = false;
     setView("entry"); renderSegs(); renderUnits(); fillForm();
     window.scrollTo({top: $("form").offsetTop - 70});
   });
   on("week", "click", ev => { const b = ev.target.closest("button[data-date]"); if (b) { pickDate(b.getAttribute("data-date")); window.scrollTo({top:0}); } });
-  on("rows", "input", ev => { latinize(ev.target); S.form.dirty = true; });
-  on("swt", "input", ev => { latinize(ev.target); S.form.swtDirty = true; });
+  on("rows", "input", ev => { latinize(ev.target); touchForm(false); });
+  on("swt", "input", ev => { latinize(ev.target); touchForm(true); });
+  // when the cursor leaves the form, show the stored values in sheet format (1.4 becomes 1.40)
+  on("form", "focusout", () => setTimeout(() => { if (!$("form").contains(document.activeElement) && !S.form.dirty && !S.form.swtDirty && !S.form.saving) fillForm(); }, 0));
   on("form", "keydown", ev => {
     if (ev.key !== "Enter" || !ev.target.classList || !ev.target.classList.contains("num-in")) return;
     ev.preventDefault();
     const ins = [$("swt")].concat(ITEMS.map(it => $("v" + it[0]))); const i = ins.indexOf(ev.target);
     if (i >= 0 && i < ins.length - 1) { ins[i + 1].focus(); ins[i + 1].select(); } else $("save").focus();
   });
-  on("form", "submit", onSave);
+  on("form", "submit", onNext);
   on("del", "click", onDelete);
   on("datebtn", "click", () => toggleCal());
   on("cal", "click", ev => {
@@ -1277,7 +1325,11 @@ function wire(){
   on("x-day", "click", exportDay); on("x-month", "click", exportMonth); on("x-copy", "click", copySheet);
   on("setcard", "input", () => { setDirty = true; });
   on("setcard", "submit", onSettings);
-  document.addEventListener("visibilitychange", () => { if (!document.hidden && !idleOut()) applyClock(false); });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) { if (S.form.dirty || S.form.swtDirty) saveNow(); return; }   // store at once when the page is put away
+    if (!idleOut()) applyClock(false);
+  });
+  window.addEventListener("pagehide", () => { if (S.form.dirty || S.form.swtDirty) saveNow(); });
   for (const name of ["pointerdown", "keydown", "input", "wheel", "touchstart"]) document.addEventListener(name, onActivity, {capture:true, passive:true});
 }
 
