@@ -11,8 +11,8 @@ window.DCR_CONFIG = {
     appId: "1:451676426721:web:864699dc2c175a6042c2a0"
   },
   // حسابات الدخول تنضاف بـFirebase (Authentication ← Users) بهالأسماء:
-  // DCR 1: shift-a-1@dcr-log.example ... shift-f-1@dcr-log.example
-  // DCR 2: shift-a-2@dcr-log.example ... shift-f-2@dcr-log.example
+  // DCR 1: 1a@dcr-log.example  1b  1c  1d  1f
+  // DCR 2: 2a@dcr-log.example  2b  2c  2d  2f
   // المشرف: admin@dcr-log.example
   // إذا غيرت النطاق هني، غيره بعد بملف firestore.rules.
   accountDomain: "dcr-log.example",

@@ -21,15 +21,15 @@
 3. **Authentication ← Users ← Add user**: ضيف الحسابات وحط لكل واحد كلمة سر:
 
    ```
-   shift-a-1@dcr-log.example    shift-a-2@dcr-log.example
-   shift-b-1@dcr-log.example    shift-b-2@dcr-log.example
-   shift-c-1@dcr-log.example    shift-c-2@dcr-log.example
-   shift-d-1@dcr-log.example    shift-d-2@dcr-log.example
-   shift-f-1@dcr-log.example    shift-f-2@dcr-log.example
+   1a@dcr-log.example    2a@dcr-log.example
+   1b@dcr-log.example    2b@dcr-log.example
+   1c@dcr-log.example    2c@dcr-log.example
+   1d@dcr-log.example    2d@dcr-log.example
+   1f@dcr-log.example    2f@dcr-log.example
    admin@dcr-log.example
    ```
 
-   الرقم الأخير هو القسم: `-1` حق DCR 1 و `-2` حق DCR 2.
+   الرقم هو القسم (1 حق DCR 1 و 2 حق DCR 2) والحرف هو الشفت.
 
    هذي أسماء دخول مو إيميلات حقيقية، وما ينرسل عليها شي. إذا Firebase ما قبل الاسم، لازم يتغير النطاق بملف `config.js` وملف `firestore.rules` مع بعض.
 4. **Authentication ← Settings ← User actions**: إذا لقيت خيار إنشاء الحسابات (sign-up) طفّه، عشان محد يضيف حساب غيرك.

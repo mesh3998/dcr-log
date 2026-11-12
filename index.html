@@ -850,7 +850,7 @@ async function onSave(ev){
   if (firstBad || !sw.ok) { fmsg("في خانة قيمتها مو رقم. صحّحها وبعدين احفظ."); (firstBad || $("swt")).focus(); return; }
   if (S.form.st === "run" && !filled) return fmsg("اكتب قراءة وحدة على الأقل، أو غيّر حالة المقطرة إذا كانت واقفة.");
   const unit = S.unit, slot = S.slot, date = S.date, g = groupOf(unit);
-  const entry = {s:S.shift, st:S.form.st, v, by: S.role === "admin" ? "admin" : "shift-" + S.shift.toLowerCase() + "-" + S.dcr, at:Date.now()};
+  const entry = {s:S.shift, st:S.form.st, v, by: S.role === "admin" ? "admin" : S.dcr + S.shift.toLowerCase(), at:Date.now()};
   const data = {date, month:monthOf(date), g, u:{[unit]:{[slot]:entry}}};
   if (S.form.swtDirty) data.swt = sw.v;
   fmsg(""); setSaving(true);
@@ -992,7 +992,8 @@ async function onSettings(ev){
 
 /* ---------- sign-in ---------- */
 const ACCS = SHIFTS.map(s => ({k:s, t:s})).concat([{k:"admin", t:"المشرف"}]);
-const emailOf = (k, dcr) => (k === "admin" ? "admin" : "shift-" + k.toLowerCase() + "-" + dcr) + "@" + DOMAIN;
+// sign-in names: admin, or DCR number + shift letter, like 1a and 2a
+const emailOf = (k, dcr) => (k === "admin" ? "admin" : dcr + k.toLowerCase()) + "@" + DOMAIN;
 function renderAcc(){
   seg("seg-acc", ACCS, S.acc, "acc");
   seg("seg-accdcr", [{k:1, t:"DCR 1"}, {k:2, t:"DCR 2"}], S.accDcr, "accdcr");
@@ -1025,8 +1026,8 @@ function onAuth(user){
   stopData();
   if (!user) { S.role = null; showLogin(); return; }
   const email = String(user.email || "").toLowerCase();
-  const m = /^shift-([a-z])-([12])@(.+)$/.exec(email);
-  if (m && m[3] === DOMAIN && SHIFTS.includes(m[1].toUpperCase())) { S.role = "shift"; S.shift = m[1].toUpperCase(); S.dcr = Number(m[2]); }
+  const m = /^([12])([a-z])@(.+)$/.exec(email);
+  if (m && m[3] === DOMAIN && SHIFTS.includes(m[2].toUpperCase())) { S.role = "shift"; S.shift = m[2].toUpperCase(); S.dcr = Number(m[1]); }
   else if (email === "admin@" + DOMAIN) S.role = "admin";
   else { S.role = null; S.loginMsg = "هالحساب مو معرّف بالبرنامج."; FB.signOut(auth).catch(() => {}); return; }
   startApp();

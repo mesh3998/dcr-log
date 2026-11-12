@@ -12,13 +12,13 @@ service cloud.firestore {
     function isAdmin() {
       return signedIn() && request.auth.token.email == 'admin@dcr-log.example';
     }
-    // حسابات الشفتات A, B, C, D, F في DCR 1
+    // حسابات الشفتات A, B, C, D, F في DCR 1: من 1a إلى 1f
     function isDcr1() {
-      return signedIn() && request.auth.token.email.matches('shift-[abcdf]-1@dcr-log[.]example');
+      return signedIn() && request.auth.token.email.matches('1[abcdf]@dcr-log[.]example');
     }
-    // حسابات الشفتات A, B, C, D, F في DCR 2
+    // حسابات الشفتات A, B, C, D, F في DCR 2: من 2a إلى 2f
     function isDcr2() {
-      return signedIn() && request.auth.token.email.matches('shift-[abcdf]-2@dcr-log[.]example');
+      return signedIn() && request.auth.token.email.matches('2[abcdf]@dcr-log[.]example');
     }
     function known() {
       return isAdmin() || isDcr1() || isDcr2();
