@@ -16,5 +16,5 @@ window.DCR_CONFIG = {
   // المشرف: admin@dcr-log.example
   // إذا غيرت النطاق هني، غيره بعد بملف firestore.rules.
   accountDomain: "dcr-log.example",
-  title: "سجل قراءات المقطرات"
+  title: "Reading"
 };

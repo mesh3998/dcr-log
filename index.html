@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>سجل قراءات المقطرات</title>
+<title>Reading</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -50,6 +50,7 @@ button{cursor:pointer}
 h1{font-size:1.5rem;font-weight:700;line-height:1.25;margin:0;text-wrap:balance}
 .sub{margin:2px 0 0;color:var(--muted);font-family:var(--font-num);font-size:.75rem;letter-spacing:.08em}
 h2{font-size:1.0625rem;font-weight:600;line-height:1.3;margin:0;text-wrap:balance}
+.top h1,.top .sub{text-align:right}
 .conn{display:inline-flex;align-items:center;gap:8px;font-size:.8125rem;padding:4px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted)}
 .conn::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--muted)}
 .conn[data-state="ok"]{color:var(--ok);border-color:var(--ok)} .conn[data-state="ok"]::before{background:var(--ok)}
@@ -57,13 +58,25 @@ h2{font-size:1.0625rem;font-weight:600;line-height:1.3;margin:0;text-wrap:balanc
 .conn[data-state="off"]{color:var(--bad);border-color:var(--bad)} .conn[data-state="off"]::before{background:var(--bad)}
 
 .bar{position:sticky;top:0;z-index:6;background:var(--paper);padding:8px 0;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
-.datebox{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.datefield{display:flex;flex-direction:column;gap:0}
-.datewrap{position:relative;display:inline-flex;align-items:center;justify-content:center;height:44px;min-width:136px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
-.datewrap:focus-within{outline:3px solid var(--accent);outline-offset:2px}
+.datebox{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}
+.datefield{position:relative;display:flex;flex-direction:column;gap:2px}
+.datewrap{display:inline-flex;align-items:center;justify-content:center;height:44px;min-width:136px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font:inherit;color:inherit;cursor:pointer}
+.datewrap:hover{border-color:var(--accent)}
 .dateshow{font-family:var(--font-num);font-size:1rem;font-variant-numeric:tabular-nums;pointer-events:none}
-#date{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;padding:0;margin:0;cursor:pointer}
-#dayname{font-size:.75rem;color:var(--muted);padding-inline-start:2px}
+/* own date picker: always English, whatever language the device is in */
+.cal{position:absolute;top:calc(100% + 6px);right:0;z-index:12;width:268px;padding:10px;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 18px color-mix(in srgb,var(--ink) 16%,transparent);font-family:var(--font-num);font-size:.875rem}
+.cal-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;font-weight:600}
+.cal-h button{width:36px;height:36px;display:inline-grid;place-items:center;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+.cal-h svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.cal-g{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.cal-g span{font-size:.6875rem;color:var(--muted);padding:4px 0}
+.cal-g button{height:34px;border:0;border-radius:6px;background:transparent;font-family:inherit;font-variant-numeric:tabular-nums}
+.cal-g button:hover{background:var(--accent-soft)}
+.cal-g button.now{box-shadow:inset 0 0 0 1px var(--accent)}
+.cal-g button.sel{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.cal-f{display:flex;justify-content:flex-end;margin-top:6px}
+.cal-f button{min-height:34px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper);font-family:inherit}
+#dayname{font-size:.75rem;line-height:1.2;min-height:1.2em;color:var(--muted);padding-inline-start:2px}
 .icon{width:44px;height:44px;display:inline-grid;place-items:center;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
 .icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .ghost{min-height:44px;padding:0 14px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
@@ -190,7 +203,11 @@ thead th{background:var(--paper);font-weight:600;color:var(--ink)}
 .accs button{font-family:var(--font-num)} .accs button[data-acc="admin"]{font-family:var(--font-ui);flex:1.7 1 0}
 .txt{height:44px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper);font-size:1rem;width:100%}
 .txt:focus{background:var(--surface);border-color:var(--accent)}
-.ctx{margin:0;font-weight:600;font-size:.9375rem}
+.ctx{display:flex;flex-direction:column;align-items:flex-start;gap:1px;line-height:1.25}
+.ctx-l,.ctx-w{font-size:.75rem;color:var(--muted)}
+.ctx-d{font-family:var(--font-num);font-size:1.125rem;font-weight:600;font-variant-numeric:tabular-nums}
+.monthly{flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap;border-color:var(--ok);background:var(--ok-soft)}
+.pwcard .setgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
 .seg.fixed button{cursor:default}
 body[data-role="shift"] .pick{grid-template-columns:1fr 1fr}
 .week .uh{font-weight:600;min-width:64px;background:var(--paper)} .week .ph{font-family:var(--font-ui)}
@@ -199,7 +216,7 @@ body[data-role="shift"] .pick{grid-template-columns:1fr 1fr}
 .week .wt{font-weight:600}
 .wd{border:0;background:transparent;font:inherit;font-weight:600;color:var(--accent);padding:4px;min-height:36px;text-decoration:underline}
 .setgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 16px}
-@media (max-width:760px){ .setgrid{grid-template-columns:1fr 1fr} body[data-role="shift"] .pick{grid-template-columns:1fr} .week th,.week td{padding:6px 2px} .week .wk,.week .uh{min-width:46px} }
+@media (max-width:760px){ .setgrid{grid-template-columns:1fr 1fr} .pwcard .setgrid{grid-template-columns:1fr} body[data-role="shift"] .pick{grid-template-columns:1fr} .week th,.week td{padding:6px 2px} .week .wk,.week .uh{min-width:46px} }
 .login .fmsg{flex:none;min-height:1.4em}
 /* what the signed-in shift may change right now */
 .matrix td.mine,.sheet td.mine,.sheet thead th.mine{background:var(--ok-soft)}
@@ -211,18 +228,33 @@ body[data-role="shift"] .dcrs{grid-template-columns:1fr}
 <main class="wrap">
   <header class="top">
     <div>
-      <h1 id="title">سجل قراءات المقطرات</h1>
+      <h1 id="title" dir="ltr">Reading</h1>
       <p class="sub" dir="ltr">DCR OPERATOR LOG</p>
     </div>
     <div class="who" id="who" hidden>
       <span class="badge" id="badge"></span>
       <span class="conn" id="conn" data-state="loading">يتصل…</span>
+      <button type="button" class="ghost sm" id="pw-open">كلمة السر</button>
       <button type="button" class="ghost sm" id="logout">خروج</button>
     </div>
   </header>
 
   <p class="notice" id="notice" role="status" hidden></p>
   <p class="hint" id="loading">يحمّل…</p>
+
+  <form class="card pwcard" id="pwcard" novalidate hidden>
+    <div class="cardhead"><h2>تغيير كلمة السر</h2><p class="hint" id="pw-who"></p></div>
+    <div class="setgrid">
+      <div class="field"><label class="lab" for="pw-cur">الحالية</label><input class="txt" id="pw-cur" type="password" autocomplete="current-password" dir="ltr"></div>
+      <div class="field"><label class="lab" for="pw-new">الجديدة</label><input class="txt" id="pw-new" type="password" autocomplete="new-password" dir="ltr"></div>
+      <div class="field"><label class="lab" for="pw-new2">الجديدة مرة ثانية</label><input class="txt" id="pw-new2" type="password" autocomplete="new-password" dir="ltr"></div>
+    </div>
+    <div class="exports">
+      <button type="submit" class="primary" id="pw-save">حفظ كلمة السر</button>
+      <button type="button" class="ghost" id="pw-cancel">إلغاء</button>
+      <span class="fmsg" id="pw-msg" role="alert"></span>
+    </div>
+  </form>
 
   <section class="card login" id="view-login" hidden>
     <h2>تسجيل الدخول</h2>
@@ -240,14 +272,14 @@ body[data-role="shift"] .dcrs{grid-template-columns:1fr}
       <div class="datebox" id="datebox">
         <button type="button" class="icon" id="d-prev" aria-label="اليوم السابق"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <div class="datefield">
-          <label for="date" class="vh">تاريخ الورقة</label>
-          <span class="datewrap"><span class="dateshow" id="dateshow" dir="ltr"></span><input type="date" id="date" lang="en"></span>
           <span id="dayname"></span>
+          <button type="button" class="datewrap" id="datebtn" title="تاريخ الورقة" aria-haspopup="dialog" aria-expanded="false"><span class="dateshow" id="dateshow" dir="ltr"></span></button>
+          <div class="cal" id="cal" dir="ltr" role="dialog" aria-label="Choose date" hidden></div>
         </div>
         <button type="button" class="icon" id="d-next" aria-label="اليوم التالي"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
         <button type="button" class="ghost" id="d-today">اليوم</button>
       </div>
-      <p class="ctx" id="ctxline" hidden></p>
+      <div class="ctx" id="ctxline" hidden><span class="ctx-l">ورقة</span><span class="ctx-d" id="ctx-date" dir="ltr"></span><span class="ctx-w" id="ctx-day"></span></div>
       <div class="tabs" role="tablist" aria-label="الشاشات">
         <button type="button" role="tab" id="tab-entry" aria-controls="view-entry" aria-selected="true">تسجيل</button>
         <button type="button" role="tab" id="tab-review" aria-controls="view-review" aria-selected="false">الداشبورد</button>
@@ -292,6 +324,10 @@ body[data-role="shift"] .dcrs{grid-template-columns:1fr}
     </section>
 
     <section class="view" id="view-review" role="tabpanel" aria-labelledby="tab-review" hidden>
+      <div class="card monthly" id="monthly" hidden>
+        <div><h2>قراءات شهر <span dir="ltr" id="mo-name"></span> اكتملت</h2><p class="hint" id="mo-msg">نزّل ملف Excel واحفظه عندك. التنبيه يختفي بعد التنزيل.</p></div>
+        <button type="button" class="primary" id="mo-get">تنزيل Excel الشهر</button>
+      </div>
       <div class="tiles" id="tiles"></div>
       <div class="card">
         <div class="cardhead"><h2>تغطية اليوم</h2><p class="hint" id="mxhint"></p></div>
@@ -412,7 +448,7 @@ const DOMAIN = String(CFG.accountDomain || "dcr-log.example").toLowerCase();
 const SDK = "https://www.gstatic.com/firebasejs/12.0.0/";
 const S = {
   view:"entry", date:"", shift:null, slot:"0800", unit:"D1A", group:0, role:null, dcr:1, acc:"A", accDcr:1, late:false, loginMsg:"", fatal:"",
-  cfg:{starts:{m:7, a:15, n:23}, grace:60},
+  cfg:{starts:{m:7, a:15, n:23}, grace:60, exported:""}, monthly:"",
   ctx:{cur:"", prev:"", canLate:false, period:"", date:""},
   docs:{}, loaded:false, stale:false, failed:"", week:{key:"", by:{}},
   form:{dirty:false, swtDirty:false, saving:false, st:"run"}
@@ -466,12 +502,13 @@ function defaultSlot(period, c){
 const validStarts = s => s.m !== s.a && s.a !== s.n && s.m !== s.n &&
   ((s.a - s.m + 24) % 24) + ((s.n - s.a + 24) % 24) + ((s.m - s.n + 24) % 24) === 24;
 function cleanCfg(x){
-  const d = {starts:{m:7, a:15, n:23}, grace:60};
+  const d = {starts:{m:7, a:15, n:23}, grace:60, exported:""};
   if (!x || typeof x !== "object") return d;
   const st = x.starts && typeof x.starts === "object" ? x.starts : {};
   const h = k => Number.isInteger(st[k]) && st[k] >= 0 && st[k] <= 23 ? st[k] : d.starts[k];
-  const out = {starts:{m:h("m"), a:h("a"), n:h("n")}, grace: Number.isInteger(x.grace) && x.grace >= 0 && x.grace <= 240 ? x.grace : d.grace};
-  return validStarts(out.starts) ? out : d;
+  const out = {starts:{m:h("m"), a:h("a"), n:h("n")}, grace: Number.isInteger(x.grace) && x.grace >= 0 && x.grace <= 240 ? x.grace : d.grace,
+               exported: typeof x.exported === "string" && /^\d{4}-\d{2}$/.test(x.exported) ? x.exported : ""};   // last month whose Excel file the admin has taken
+  return validStarts(out.starts) ? out : Object.assign(d, {exported: out.exported});
 }
 
 /* ---------- toast / messages ---------- */
@@ -498,12 +535,36 @@ function buildRows(){
     `<span class="prev" id="p${it[0]}"></span></div>`).join("");
 }
 function renderDate(){
-  $("date").value = S.date;
   $("dateshow").textContent = dmy(S.date);
   let day = "";
   try { day = new Intl.DateTimeFormat("ar-KW", {weekday:"long"}).format(parseYmd(S.date)); } catch (e) {}
   $("dayname").textContent = day + (S.date === todaySheet() ? " · ورقة اليوم" : "");
-  $("ctxline").textContent = "ورقة \u2066" + dmy(S.date) + "\u2069" + (day ? " · " + day : "");
+  $("ctx-date").textContent = dmy(S.date); $("ctx-day").textContent = day;
+  if (!$("cal").hidden) renderCal();
+}
+/* date picker: drawn here so it is always in English with Latin digits */
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+let calYM = "";
+function renderCal(){
+  const p = calYM.split("-").map(Number), y = p[0], m = p[1];
+  const first = new Date(y, m - 1, 1).getDay(), days = new Date(y, m, 0).getDate(), today = todaySheet();
+  let g = ["Su","Mo","Tu","We","Th","Fr","Sa"].map(d => `<span>${d}</span>`).join("") + `<span></span>`.repeat(first);
+  for (let d = 1; d <= days; d++) { const iso = calYM + "-" + pad(d); g += `<button type="button" data-day="${iso}" class="${iso === S.date ? "sel" : (iso === today ? "now" : "")}">${d}</button>`; }
+  $("cal").innerHTML = `<div class="cal-h"><button type="button" data-cal="-1" aria-label="Previous month"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>` +
+    `<span>${MONTHS[m - 1]} ${y}</span><button type="button" data-cal="1" aria-label="Next month"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></div>` +
+    `<div class="cal-g">${g}</div><div class="cal-f"><button type="button" data-day="${today}">Today</button></div>`;
+}
+function toggleCal(open){
+  const el = $("cal"), show = open === undefined ? el.hidden : open;
+  if (show) { calYM = monthOf(S.date); renderCal(); }
+  el.hidden = !show; $("datebtn").setAttribute("aria-expanded", show);
+}
+// Arabic-Indic digits typed into a reading turn into Latin digits as they are typed.
+function latinize(el){
+  if (!el || typeof el.value !== "string" || !/[٠-٩۰-۹٫،]/.test(el.value)) return;
+  const pos = el.selectionStart;
+  el.value = el.value.replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/[٫،]/g, ".");
+  try { el.setSelectionRange(pos, pos); } catch (e) {}
 }
 function renderSegs(){
   const admin = S.role === "admin";
@@ -544,7 +605,7 @@ function renderPrev(){
 }
 function renderMeta(){
   const e = entryOf(S.unit, S.slot);
-  let t = "ما انسجلت للحين.";
+  let t = "لم يتم التسجيل إلى الآن.";
   if (e) {
     t = "مسجلة" + (e.s ? " · شفت " + e.s : "");
     if (e.at) { try { t += " · " + new Intl.DateTimeFormat("ar-KW-u-nu-latn", {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit", hour12:false}).format(new Date(e.at)); } catch (x) {} }
@@ -593,7 +654,7 @@ function renderMatrix(){
     const i = UNITS.indexOf(u);
     h += `<tr class="${i === 8 && vu.length > 8 ? "dcr2" : (i % 4 === 0 ? "gs" : "")}"><th scope="row" class="uh">${u}</th>` + SLOTS.map(sl => {
       const e = entryOf(u, sl);
-      const label = u + " " + SLOT_LABEL[sl] + " " + (e ? "شفت " + (e.s || "?") : "ما انسجلت");
+      const label = u + " " + SLOT_LABEL[sl] + " " + (e ? "شفت " + (e.s || "?") : "لم يتم التسجيل");
       return `<td${hl && canEdit(u, sl) ? ' class="mine"' : ""}><button type="button" class="cell" data-unit="${u}" data-slot="${sl}" aria-label="${esc(label)}">${e ? chip(e) : `<span class="dot"></span>`}</button></td>`;
     }).join("") + `</tr>`;
   });
@@ -750,17 +811,51 @@ function download(filename, u8){
   setTimeout(() => URL.revokeObjectURL(url), 10000);
   xmsg("نزل الملف: " + filename, true);
 }
-function exportDay(){ xmsg(""); download("DCR-Log-" + S.date + ".xlsx", makeXlsx(dayBook(S.date, S.docs))); }
+function exportDay(){ xmsg(""); download("Reading-" + S.date + ".xlsx", makeXlsx(dayBook(S.date, S.docs))); }
+// Builds and downloads one month's workbook; false when that month has no readings.
+async function monthFile(month){
+  const list = [];
+  const snap = await FB.getDocs(FB.query(FB.collection(db, "sheets"), FB.where("month", "==", month)));
+  snap.forEach(d => { const x = d.data(); if (x) list.push(x); });
+  if (!list.length) return false;
+  download("Reading-" + month + ".xlsx", makeXlsx(monthBook(list)));
+  return true;
+}
 async function exportMonth(){
   if (!db) return;
   const btn = $("x-month"); btn.disabled = true; xmsg("");
+  try { if (!(await monthFile(monthOf(S.date)))) xmsg("ما في قراءات مسجلة بهالشهر."); }
+  catch (err) { xmsg("ما قدرنا نجيب قراءات الشهر. جرّب مرة ثانية."); }
+  finally { btn.disabled = false; }
+}
+
+/* ---------- month-end file (admin) ---------- */
+// Once the sheet date has moved into a new month, the month before it is complete. The admin
+// then sees a reminder until that month's Excel file has been downloaded.
+const prevMonth = m => { const p = m.split("-").map(Number); const d = new Date(p[0], p[1] - 2, 1); return d.getFullYear() + "-" + pad(d.getMonth() + 1); };
+let monthlyFor = "";
+function renderMonthly(){
+  const show = S.role === "admin" && !!S.monthly && !(S.cfg.exported >= S.monthly);
+  $("monthly").hidden = !show;
+  if (show) $("mo-name").textContent = S.monthly.slice(5) + "-" + S.monthly.slice(0, 4);
+}
+async function checkMonthly(){
+  if (S.role !== "admin" || !db) return;
+  const done = prevMonth(monthOf(todaySheet()));
+  if (S.cfg.exported >= done) { S.monthly = ""; renderMonthly(); return; }
+  if (monthlyFor === done) { renderMonthly(); return; }
+  monthlyFor = done;
+  try { const snap = await FB.getDocs(FB.query(FB.collection(db, "sheets"), FB.where("month", "==", done), FB.limit(1))); S.monthly = snap.empty ? "" : done; }
+  catch (e) { S.monthly = ""; monthlyFor = ""; }
+  renderMonthly();
+}
+async function onMonthly(){
+  const month = S.monthly, btn = $("mo-get"); if (!month || !db) return;
+  btn.disabled = true;
   try {
-    const month = monthOf(S.date); const list = [];
-    const snap = await FB.getDocs(FB.query(FB.collection(db, "sheets"), FB.where("month", "==", month)));
-    snap.forEach(d => { const x = d.data(); if (x) list.push(x); });
-    if (!list.length) xmsg("ما في قراءات مسجلة بهالشهر.");
-    else download("DCR-Log-" + month + ".xlsx", makeXlsx(monthBook(list)));
-  } catch (err) { xmsg("ما قدرنا نجيب قراءات الشهر. جرّب مرة ثانية."); }
+    if (await monthFile(month)) { await commit(FB.setDoc(FB.doc(db, "config", "main"), {exported: month}, {merge:true})); S.cfg.exported = month; }
+    renderMonthly();
+  } catch (err) { $("mo-msg").textContent = "ما قدرنا نجهز الملف. جرّب مرة ثانية."; }
   finally { btn.disabled = false; }
 }
 async function copySheet(){
@@ -794,7 +889,7 @@ let unsub = null, unsubCfg = null, staleT = 0;
 function stopData(){
   for (const u of [unsub, unsubCfg]) { if (u) { try { u(); } catch (e) {} } }
   unsub = null; unsubCfg = null; clearTimeout(staleT); staleT = 0;
-  S.docs = {}; S.loaded = false; S.stale = false; S.failed = ""; S.week = {key:"", by:{}};
+  S.docs = {}; S.loaded = false; S.stale = false; S.failed = ""; S.week = {key:"", by:{}}; S.monthly = ""; monthlyFor = "";
 }
 function subscribe(){
   if (unsub) { try { unsub(); } catch (e) {} unsub = null; }
@@ -819,6 +914,7 @@ function subscribeCfg(){
     S.cfg = cleanCfg(snap.exists() ? snap.data() : null);
     renderSettings();
     if (S.role === "shift") applyClock(false); else if (S.date) renderDate();
+    checkMonthly();
   }, () => {});
 }
 function onData(){
@@ -985,9 +1081,47 @@ async function onSettings(ev){
   if (!validStarts(starts)) return say("المواعيد لازم تكون بالترتيب: M، بعده A، بعده N.");
   if (!Number.isInteger(grace) || grace < 0 || grace > 240) return say("المهلة من 0 إلى 240 دقيقة.");
   $("set-save").disabled = true; say("");
-  try { await commit(FB.setDoc(FB.doc(db, "config", "main"), {starts, grace})); setDirty = false; say("انحفظت المواعيد.", true); }
+  try { await commit(FB.setDoc(FB.doc(db, "config", "main"), {starts, grace}, {merge:true})); setDirty = false; say("انحفظت المواعيد.", true); }
   catch (err) { say(errText(err)); }
   finally { $("set-save").disabled = false; }
+}
+
+/* ---------- change own password ---------- */
+function pwSay(t){ $("pw-msg").textContent = t || ""; }
+function togglePw(show){
+  const el = $("pwcard"), open = show === undefined ? el.hidden : show;
+  el.hidden = !open; pwSay("");
+  for (const id of ["pw-cur", "pw-new", "pw-new2"]) $(id).value = "";
+  if (open) {
+    $("pw-who").textContent = S.role === "shift" ? "هالحساب يدخل فيه كل اللي على شفتك بقسمك. بعد التغيير عطهم الكلمة الجديدة." : "";
+    $("pw-cur").focus();
+  }
+}
+function pwError(err){
+  const c = (err && err.code) || "";
+  if (/wrong-password|invalid-credential|invalid-login/.test(c)) return "كلمة السر الحالية غلط.";
+  if (/weak-password/.test(c)) return "كلمة السر الجديدة ضعيفة. اختر أطول.";
+  if (/too-many-requests/.test(c)) return "محاولات وايد. انطر كم دقيقة وجرّب مرة ثانية.";
+  if (/network-request-failed/.test(c)) return "ما في نت. تأكد من الاتصال وجرّب مرة ثانية.";
+  return "ما تغيرت كلمة السر. جرّب مرة ثانية.";
+}
+async function onPassword(ev){
+  ev.preventDefault();
+  const u = auth && auth.currentUser; if (!u) return;
+  const cur = $("pw-cur").value, n1 = $("pw-new").value, n2 = $("pw-new2").value;
+  if (!cur || !n1 || !n2) return pwSay("عبّي الخانات الثلاث.");
+  if (n1.length < 6) return pwSay("كلمة السر الجديدة لازم تكون 6 خانات أو أكثر.");
+  if (/^(.)\1*$/.test(n1)) return pwSay("اختر كلمة سر مو كلها نفس الرقم أو الحرف.");
+  if (n1 !== n2) return pwSay("الكلمتين الجديدتين مو نفس بعض.");
+  if (n1 === cur) return pwSay("الجديدة نفس الحالية.");
+  $("pw-save").disabled = true; pwSay("");
+  try {
+    // the current password is checked again by Firebase before the change is accepted
+    await FB.reauthenticateWithCredential(u, FB.EmailAuthProvider.credential(u.email, cur));
+    await FB.updatePassword(u, n1);
+    togglePw(false); toast("تغيرت كلمة السر.");
+  } catch (err) { pwSay(pwError(err)); }
+  finally { $("pw-save").disabled = false; }
 }
 
 /* ---------- sign-in ---------- */
@@ -1000,7 +1134,7 @@ function renderAcc(){
   $("f-accdcr").hidden = S.acc === "admin";
 }
 function showLogin(){
-  $("loading").hidden = true; $("app").hidden = true; $("who").hidden = true; $("view-login").hidden = false;
+  $("loading").hidden = true; $("app").hidden = true; $("who").hidden = true; $("pwcard").hidden = true; $("view-login").hidden = false;
   renderAcc(); lmsg(S.loginMsg); S.loginMsg = "";
 }
 function loginError(err){
@@ -1036,6 +1170,7 @@ function startApp(){
   const admin = S.role === "admin";
   document.body.dataset.role = S.role;
   $("loading").hidden = true; $("view-login").hidden = true; $("app").hidden = false; $("who").hidden = false;
+  $("pwcard").hidden = true; $("monthly").hidden = true; $("cal").hidden = true;
   const b = $("badge");
   b.textContent = admin ? "المشرف" : "شفت " + S.shift + " · DCR " + S.dcr;
   if (!admin && !DCR_UNITS[S.dcr - 1].includes(S.unit)) S.unit = DCR_UNITS[S.dcr - 1][0];
@@ -1088,8 +1223,8 @@ function wire(){
     window.scrollTo({top: $("form").offsetTop - 70});
   });
   on("week", "click", ev => { const b = ev.target.closest("button[data-date]"); if (b) { pickDate(b.getAttribute("data-date")); window.scrollTo({top:0}); } });
-  on("rows", "input", () => { S.form.dirty = true; });
-  on("swt", "input", () => { S.form.swtDirty = true; });
+  on("rows", "input", ev => { latinize(ev.target); S.form.dirty = true; });
+  on("swt", "input", ev => { latinize(ev.target); S.form.swtDirty = true; });
   on("form", "keydown", ev => {
     if (ev.key !== "Enter" || !ev.target.classList || !ev.target.classList.contains("num-in")) return;
     ev.preventDefault();
@@ -1098,8 +1233,20 @@ function wire(){
   });
   on("form", "submit", onSave);
   on("del", "click", onDelete);
-  on("date", "change", ev => pickDate(ev.target.value));
-  on("date", "click", ev => { try { ev.target.showPicker(); } catch (e) {} });
+  on("datebtn", "click", () => toggleCal());
+  on("cal", "click", ev => {
+    ev.stopPropagation();
+    const nav = ev.target.closest("button[data-cal]");
+    if (nav) { const p = calYM.split("-").map(Number), d = new Date(p[0], p[1] - 1 + Number(nav.getAttribute("data-cal")), 1); calYM = d.getFullYear() + "-" + pad(d.getMonth() + 1); renderCal(); return; }
+    const day = ev.target.closest("button[data-day]");
+    if (day) { toggleCal(false); pickDate(day.getAttribute("data-day")); }
+  });
+  document.addEventListener("click", ev => { if (!$("cal").hidden && !ev.target.closest(".datefield")) toggleCal(false); });
+  document.addEventListener("keydown", ev => { if (ev.key === "Escape" && !$("cal").hidden) { toggleCal(false); $("datebtn").focus(); } });
+  on("pw-open", "click", () => togglePw());
+  on("pw-cancel", "click", () => togglePw(false));
+  on("pwcard", "submit", onPassword);
+  on("mo-get", "click", onMonthly);
   on("d-prev", "click", () => pickDate(addDays(S.date, -1)));
   on("d-next", "click", () => pickDate(addDays(S.date, 1)));
   on("d-today", "click", () => pickDate(todaySheet()));
