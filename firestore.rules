@@ -35,16 +35,17 @@ service cloud.firestore {
 
     // الدقايق من 1970 بتوقيت الكويت، والعد يبدا الساعة 7:00 (أول فترة M)
     function shiftMin(ms) {
-      return math.floor((ms + 10800000) / 60000) - 420;
+      return int(math.floor((ms + 10800000) / 60000)) - 420;
     }
     // 0 = M، 1 = A، 2 = N
     function periodAt(m) {
-      return math.floor((m % 1440) / 480);
+      return int(math.floor((m % 1440) / 480));
     }
     // حرف الشفت اللي على الدوام بهالدقيقة
     function dutyAt(m) {
-      let i = (math.floor(m / 1440) - 20468 + 5000) % 5;
-      return [['d', 'a', 'c', 'b', 'f'], ['f', 'd', 'a', 'c', 'b'], ['b', 'f', 'd', 'a', 'c']][periodAt(m)][i];
+      let i = (int(math.floor(m / 1440)) - 20468 + 5000) % 5;
+      // M: d a c b f، A: f d a c b، N: b f d a c (قائمة وحدة، لأن Firebase ما يقبل قائمة داخل قائمة هني)
+      return ['d', 'a', 'c', 'b', 'f', 'f', 'd', 'a', 'c', 'b', 'b', 'f', 'd', 'a', 'c'][periodAt(m) * 5 + i];
     }
     // الشفت الداخل هو اللي على الدوام
     function onDuty(m) {
@@ -52,22 +53,26 @@ service cloud.firestore {
     }
     // تاريخ الورقة لهالدوام (اليوم اللي بدا مع فترة M)، مثل 2026-11-18
     function dayRe(m) {
-      let t = timestamp.value(math.floor(m / 1440) * 86400000 + 32400000);
+      let t = timestamp.value(int(math.floor(m / 1440)) * 86400000 + 32400000);
       return string(t.year()) + '-0?' + string(t.month()) + '-0?' + string(t.day());
     }
     // أوقات القراءة لفترة الدوام
     function slotsAt(m) {
-      return [['0800', '1200'], ['1600', '2000'], ['0100', '0500']][periodAt(m)];
+      let s = ['0800', '1200', '1600', '2000', '0100', '0500'];
+      let p = periodAt(m);
+      return [s[p * 2], s[p * 2 + 1]];
     }
     function unitsOf(g) {
-      return [['D1A', 'D1B', 'D2A', 'D2B'], ['D3A', 'D3B', 'D4A', 'D4B'], ['D5A', 'D5B', 'D6A', 'D6B'], ['D7A', 'D7B', 'D8A', 'D8B']][g];
+      let u = ['D1A', 'D1B', 'D2A', 'D2B', 'D3A', 'D3B', 'D4A', 'D4B', 'D5A', 'D5B', 'D6A', 'D6B', 'D7A', 'D7B', 'D8A', 'D8B'];
+      let k = int(g) * 4;
+      return [u[k], u[k + 1], u[k + 2], u[k + 3]];
     }
     // الشفت يغير ورقة اليوم بس، وبس قراءات فترة دوامه
-    function sheetOk(m) {
+    // before: القراءات قبل التعديل ({} لما الورقة جديدة)
+    function sheetOk(m, before) {
       let units = unitsOf(request.resource.data.g);
       let slots = slotsAt(m);
       let after = request.resource.data.get('u', {});
-      let before = resource == null ? {} : resource.data.get('u', {});
       return onDuty(m)
         && request.resource.data.date.matches(dayRe(m))
         && after.diff(before).affectedKeys().hasOnly(units)
@@ -91,16 +96,21 @@ service cloud.firestore {
     }
 
     // ورقة القراءات: مستند لكل تاريخ ولكل ورقة (4 مقطرات)، اسمه مثل 2026-11-11_1
-    match /sheets/{id} {
-      allow read: if known();
-      allow create, update: if request.resource.data.g is int
+    function sheetValid(id) {
+      return request.resource.data.g is int
         && request.resource.data.g >= 0
         && request.resource.data.g <= 3
         && mayWrite(request.resource.data.g)
         && request.resource.data.date is string
         && request.resource.data.month is string
-        && id == request.resource.data.date + '_' + string(request.resource.data.g)
-        && (isAdmin() || sheetOk(nowMin()) || sheetOk(nowMin() - 10));
+        && id == request.resource.data.date + '_' + string(request.resource.data.g);
+    }
+    match /sheets/{id} {
+      allow read: if known();
+      allow create: if sheetValid(id)
+        && (isAdmin() || sheetOk(nowMin(), {}) || sheetOk(nowMin() - 10, {}));
+      allow update: if sheetValid(id)
+        && (isAdmin() || sheetOk(nowMin(), resource.data.get('u', {})) || sheetOk(nowMin() - 10, resource.data.get('u', {})));
       allow delete: if isAdmin();
     }
 
