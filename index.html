@@ -209,6 +209,11 @@ thead th{background:var(--paper);font-weight:600;color:var(--ink)}
 .ctx-d{font-family:var(--font-num);font-size:1.125rem;font-weight:600;font-variant-numeric:tabular-nums}
 .monthly{flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap;border-color:var(--ok);background:var(--ok-soft)}
 .pwcard .setgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.pwpick{display:grid;grid-template-columns:2fr 1fr;gap:12px 16px}
+.cell{flex-direction:column;gap:2px}
+.tm{font-size:.6875rem;line-height:1;color:var(--muted);font-variant-numeric:tabular-nums} .tm.late{color:var(--warn);font-weight:600}
+.matrix tr.stamp>*{background:var(--paper)} .matrix tr.stamp .uh{font-family:var(--font-ui)} .matrix tr.stamp td{padding:4px 2px;min-width:64px}
+.week td.now{background:var(--ok-soft);box-shadow:inset 0 0 0 2px var(--ok)}
 .seg.fixed button{cursor:default}
 body[data-role="shift"] .pick{grid-template-columns:1fr 1fr}
 .week .uh{font-weight:600;min-width:64px;background:var(--paper)} .week .ph{font-family:var(--font-ui)}
@@ -217,7 +222,7 @@ body[data-role="shift"] .pick{grid-template-columns:1fr 1fr}
 .week .wt{font-weight:600}
 .wd{border:0;background:transparent;font:inherit;font-weight:600;color:var(--accent);padding:4px;min-height:36px;text-decoration:underline}
 .setgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 16px}
-@media (max-width:760px){ .setgrid{grid-template-columns:1fr 1fr} .pwcard .setgrid{grid-template-columns:1fr} body[data-role="shift"] .pick{grid-template-columns:1fr} .week th,.week td{padding:6px 2px} .week .wk,.week .uh{min-width:46px} }
+@media (max-width:760px){ .setgrid{grid-template-columns:1fr 1fr} .pwcard .setgrid,.pwpick{grid-template-columns:1fr} body[data-role="shift"] .pick{grid-template-columns:1fr} .week th,.week td{padding:6px 2px} .week .wk,.week .uh{min-width:46px} }
 .login .fmsg{flex:none;min-height:1.4em}
 /* what the signed-in shift may change right now */
 .matrix td.mine,.sheet td.mine,.sheet thead th.mine{background:var(--ok-soft)}
@@ -235,7 +240,7 @@ body[data-role="shift"] .dcrs{grid-template-columns:1fr}
     <div class="who" id="who" hidden>
       <span class="badge" id="badge"></span>
       <span class="conn" id="conn" data-state="loading">يتصل…</span>
-      <button type="button" class="ghost sm" id="pw-open">كلمة السر</button>
+      <button type="button" class="ghost sm" id="pw-open" hidden>كلمات السر</button>
       <button type="button" class="ghost sm" id="logout">خروج</button>
     </div>
   </header>
@@ -244,12 +249,17 @@ body[data-role="shift"] .dcrs{grid-template-columns:1fr}
   <p class="hint" id="loading">يحمّل…</p>
 
   <form class="card pwcard" id="pwcard" novalidate hidden>
-    <div class="cardhead"><h2>تغيير كلمة السر</h2><p class="hint" id="pw-who"></p></div>
+    <div class="cardhead"><h2>كلمات السر</h2><p class="hint">المشرف بس يغير كلمات السر. اختر الحساب واكتب كلمة سره الحالية والجديدة.</p></div>
+    <div class="pwpick">
+      <div class="field"><span class="lab" id="lab-pwacc">الحساب</span><div class="seg accs" id="seg-pwacc" dir="ltr" role="group" aria-labelledby="lab-pwacc"></div></div>
+      <div class="field" id="f-pwdcr"><span class="lab" id="lab-pwdcr">القسم</span><div class="seg num" id="seg-pwdcr" dir="ltr" role="group" aria-labelledby="lab-pwdcr"></div></div>
+    </div>
     <div class="setgrid">
-      <div class="field"><label class="lab" for="pw-cur">الحالية</label><input class="txt" id="pw-cur" type="password" autocomplete="current-password" dir="ltr"></div>
+      <div class="field"><label class="lab" for="pw-cur">كلمة السر الحالية</label><input class="txt" id="pw-cur" type="password" autocomplete="off" dir="ltr"></div>
       <div class="field"><label class="lab" for="pw-new">الجديدة</label><input class="txt" id="pw-new" type="password" autocomplete="new-password" dir="ltr"></div>
       <div class="field"><label class="lab" for="pw-new2">الجديدة مرة ثانية</label><input class="txt" id="pw-new2" type="password" autocomplete="new-password" dir="ltr"></div>
     </div>
+    <p class="hint">إذا ما تعرف كلمة السر الحالية لحساب، غيّرها من Firebase: امسح الحساب وضيفه بنفس الاسم وكلمة سر جديدة.</p>
     <div class="exports">
       <button type="submit" class="primary" id="pw-save">حفظ كلمة السر</button>
       <button type="button" class="ghost" id="pw-cancel">إلغاء</button>
@@ -262,6 +272,7 @@ body[data-role="shift"] .dcrs{grid-template-columns:1fr}
     <form id="loginform" novalidate>
       <div class="field"><span class="lab" id="lab-acc">الحساب</span><div class="seg accs" id="seg-acc" dir="ltr" role="group" aria-labelledby="lab-acc"></div></div>
       <div class="field" id="f-accdcr"><span class="lab" id="lab-accdcr">القسم</span><div class="seg num" id="seg-accdcr" dir="ltr" role="group" aria-labelledby="lab-accdcr"></div></div>
+      <p class="hint" id="dutyhint"></p>
       <div class="field"><label class="lab" for="pass">كلمة السر</label><input class="txt" id="pass" type="password" autocomplete="current-password" dir="ltr"></div>
       <button type="submit" class="primary" id="login">دخول</button>
       <p class="fmsg" id="lmsg" role="alert"></p>
@@ -349,19 +360,10 @@ body[data-role="shift"] .dcrs{grid-template-columns:1fr}
           <span class="fmsg" id="xmsg" role="status"></span>
         </div>
       </div>
-      <form class="card" id="setcard" novalidate hidden>
-        <div class="cardhead"><h2>مواعيد الشفتات</h2><p class="hint">البرنامج يثبّت الفترة للشفت حسب هالمواعيد.</p></div>
-        <div class="setgrid">
-          <div class="field"><label class="lab" for="set-m">بداية فترة M</label><select class="txt" id="set-m"></select></div>
-          <div class="field"><label class="lab" for="set-a">بداية فترة A</label><select class="txt" id="set-a"></select></div>
-          <div class="field"><label class="lab" for="set-n">بداية فترة N</label><select class="txt" id="set-n"></select></div>
-          <div class="field"><label class="lab" for="set-g">مهلة القراءة المتأخرة (دقيقة)</label><input class="txt" id="set-g" type="number" min="0" max="240" step="5" inputmode="numeric"></div>
-        </div>
-        <div class="exports">
-          <button type="submit" class="ghost" id="set-save">حفظ المواعيد</button>
-          <span class="fmsg" id="smsg" role="status"></span>
-        </div>
-      </form>
+      <div class="card" id="rotacard" hidden>
+        <div class="cardhead"><h2>جدول الشفتات</h2><p class="hint">من جدول 2026: M من 7:00 إلى 15:00، A من 15:00 إلى 23:00، N من 23:00 إلى 7:00. كل شفت يدخل ويسجل بوقت دوامه بس.</p></div>
+        <div class="scroller"><table class="week" id="rota"></table></div>
+      </div>
     </section>
   </div>
 </main>
@@ -427,6 +429,7 @@ function ls(key, val){
   try { if (val === undefined) return localStorage.getItem(key); localStorage.setItem(key, val); } catch (e) {}
   return null;
 }
+const msOf = t => isNum(t) ? t : (t && typeof t.toMillis === "function" ? t.toMillis() : null);
 // Shared data is untrusted: keep only what the sheet knows.
 function san(e){
   if (!e || typeof e !== "object") return null;
@@ -434,7 +437,7 @@ function san(e){
   const v = {};
   for (const it of ITEMS) v[it[0]] = isNum(src[it[0]]) ? src[it[0]] : null;
   return { s: SHIFTS.includes(e.s) ? e.s : "", st: STATUS_KEYS.includes(e.st) ? e.st : "run", v,
-           by: typeof e.by === "string" ? e.by : null, at: isNum(e.at) ? e.at : null };
+           by: typeof e.by === "string" ? e.by : null, at: msOf(e.at), f: msOf(e.f) };
 }
 function entryIn(docs, unit, slot){
   const d = docs[groupOf(unit)];
@@ -448,10 +451,10 @@ const CFG = window.DCR_CONFIG || {};
 const DOMAIN = String(CFG.accountDomain || "dcr-log.example").toLowerCase();
 const SDK = "https://www.gstatic.com/firebasejs/12.0.0/";
 const S = {
-  view:"entry", date:"", shift:null, slot:"0800", unit:"D1A", group:0, role:null, dcr:1, acc:"A", accDcr:1, late:false, loginMsg:"", fatal:"",
-  cfg:{starts:{m:7, a:15, n:23}, grace:60, exported:""}, monthly:"",
-  ctx:{cur:"", prev:"", canLate:false, period:"", date:""},
-  docs:{}, loaded:false, stale:false, failed:"", week:{key:"", by:{}},
+  view:"entry", date:"", shift:null, slot:"0800", unit:"D1A", group:0, role:null, dcr:1, acc:"A", accDcr:1, loginMsg:"", fatal:"", ended:false,
+  cfg:{exported:""}, monthly:"", pw:{acc:"A", dcr:1},
+  ctx:{cur:"", period:"", date:""},
+  docs:{}, stamps:{}, loaded:false, stale:false, failed:"", week:{key:"", by:{}},
   form:{dirty:false, swtDirty:false, saving:false, st:"run", rev:0, key:"", filledFor:""}
 };
 let FB = null, auth = null, db = null;
@@ -467,29 +470,43 @@ const sheetId = (date, g) => date + "_" + g;
 // A shift account belongs to one DCR and only sees that DCR's distillers.
 const visibleUnits = () => S.role === "shift" ? DCR_UNITS[S.dcr - 1] : UNITS;
 const visibleGroups = () => S.role === "shift" ? (S.dcr === 1 ? [0, 1] : [2, 3]) : [0, 1, 2, 3];
-// What the signed-in account may change: the admin everything; a shift its own DCR's distillers,
-// for the period the clock allows, on that period's sheet.
+// What the signed-in account may change: the admin everything; a shift only while it is on duty
+// (shift schedule), its own DCR's distillers, for its own period, on that period's sheet.
 function canEdit(unit, slot){
   if (S.role === "admin") return true;
   if (S.role !== "shift" || !DCR_UNITS[S.dcr - 1].includes(unit)) return false;
-  const c = clock(), per = periodOf(slot).k;
-  return (per === c.cur || (c.canLate && per === c.prev)) && sheetDateFor(per, c) === S.date;
+  const d = duty();
+  return d.shift === S.shift && periodOf(slot).k === d.period && d.day === S.date;
 }
 
 /* ---------- clock: which period is on, and which sheet it belongs to ---------- */
 const ORDER = ["m","a","n"];
+// Shift schedule 2026 (Doha West): M 07:00–15:00, A 15:00–23:00, N 23:00–07:00.
+const STARTS = {m:7, a:15, n:23};
+const RANGE = {m:"07:00–15:00", a:"15:00–23:00", n:"23:00–07:00"};
+// Five-day rotation (M, A, N, OFF, OFF) counted from 15-01-2026; the night shift of a day starts at 23:00 that day.
+// For each period: the group on duty on day 0..4 of the cycle. The same table is in firestore.rules.
+const ROTA_START = "2026-01-15";
+const ROTA = {m:["D","A","C","B","F"], a:["F","D","A","C","B"], n:["B","F","D","A","C"]};
+function rotaShift(date, period){
+  const n = Math.round((parseYmd(date) - parseYmd(ROTA_START)) / 864e5);
+  return ROTA[period][((n % 5) + 5) % 5];
+}
 const slotMin = sl => Number(sl.slice(0,2)) * 60 + Number(sl.slice(2));
 function clock(now){
   const d = new Date(now || Date.now()); const mins = d.getHours() * 60 + d.getMinutes();
   let cur = "m", since = 1e9;
-  for (const k of ORDER) { const diff = (mins - S.cfg.starts[k] * 60 + 1440) % 1440; if (diff < since) { since = diff; cur = k; } }
-  return {d, mins, cur, since, prev: ORDER[(ORDER.indexOf(cur) + 2) % 3], canLate: since < S.cfg.grace};
+  for (const k of ORDER) { const diff = (mins - STARTS[k] * 60 + 1440) % 1440; if (diff < since) { since = diff; cur = k; } }
+  return {d, mins, cur, since};
 }
+// who is on duty now, in which period, and on which sheet that period is written
+function duty(now){ const c = clock(now), day = sheetDateFor(c.cur, c); return {c, day, period:c.cur, shift: rotaShift(day, c.cur)}; }
+const offDuty = (sh, d) => "مو وقت دوام شفت " + sh + " الحين. على الدوام: شفت " + d.shift + " (" + d.period.toUpperCase() + " " + RANGE[d.period] + ").";
 // The sheet's day starts with the morning shift. A night reading written after the morning
 // shift has started still belongs to yesterday's sheet.
 function sheetDateFor(period, c){
   const base = new Date(c.d);
-  if (c.mins < S.cfg.starts.m * 60) base.setDate(base.getDate() - 1);
+  if (c.mins < STARTS.m * 60) base.setDate(base.getDate() - 1);
   if (period === "n" && c.cur === "m") base.setDate(base.getDate() - 1);
   return ymd(base);
 }
@@ -497,20 +514,21 @@ const todaySheet = () => { const c = clock(); return sheetDateFor(c.cur, c); };
 function defaultSlot(period, c){
   const slots = PERIODS.find(p => p.k === period).slots;
   if (period !== c.cur) return slots[1];
-  const off = (slotMin(slots[1]) - S.cfg.starts[period] * 60 + 1440) % 1440;
+  const off = (slotMin(slots[1]) - STARTS[period] * 60 + 1440) % 1440;
   return c.since >= off ? slots[1] : slots[0];
 }
-const validStarts = s => s.m !== s.a && s.a !== s.n && s.m !== s.n &&
-  ((s.a - s.m + 24) % 24) + ((s.n - s.a + 24) % 24) + ((s.m - s.n + 24) % 24) === 24;
+// last month whose Excel file the admin has taken
 function cleanCfg(x){
-  const d = {starts:{m:7, a:15, n:23}, grace:60, exported:""};
-  if (!x || typeof x !== "object") return d;
-  const st = x.starts && typeof x.starts === "object" ? x.starts : {};
-  const h = k => Number.isInteger(st[k]) && st[k] >= 0 && st[k] <= 23 ? st[k] : d.starts[k];
-  const out = {starts:{m:h("m"), a:h("a"), n:h("n")}, grace: Number.isInteger(x.grace) && x.grace >= 0 && x.grace <= 240 ? x.grace : d.grace,
-               exported: typeof x.exported === "string" && /^\d{4}-\d{2}$/.test(x.exported) ? x.exported : ""};   // last month whose Excel file the admin has taken
-  return validStarts(out.starts) ? out : Object.assign(d, {exported: out.exported});
+  return {exported: x && typeof x.exported === "string" && /^\d{4}-\d{2}$/.test(x.exported) ? x.exported : ""};
 }
+const hm = ms => { const d = new Date(ms); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
+const hms = ms => hm(ms) + ":" + pad(new Date(ms).getSeconds());
+// when a reading was due: the sheet date at that hour (1:00 and 5:00 fall on the next calendar day)
+function slotTime(date, slot){
+  const d = parseYmd(date); if (slot < "0700") d.setDate(d.getDate() + 1);
+  d.setHours(Number(slot.slice(0, 2)), Number(slot.slice(2)), 0, 0); return d.getTime();
+}
+const isLate = (date, slot, ms) => isNum(ms) && ms > slotTime(date, slot) + 60 * 60000;
 
 /* ---------- toast / messages ---------- */
 let toastT = 0;
@@ -518,7 +536,7 @@ function toast(t){ const el = $("toast"); el.textContent = t; el.classList.add("
 function lmsg(t){ $("lmsg").textContent = t || ""; }
 function errText(err){
   const c = (err && err.code) || "";
-  if (c === "permission-denied" || c === "unauthenticated") return "قاعدة البيانات رفضت الحفظ لهالحساب. كلّم المشرف.";
+  if (c === "permission-denied" || c === "unauthenticated") return S.role === "shift" ? "الحفظ مرفوض: التسجيل بوقت دوام شفتك بس. إذا الوقت صح، تأكد إن ساعة الجهاز مضبوطة." : "قاعدة البيانات رفضت الحفظ لهالحساب.";
   if (c === "resource-exhausted") return "الحفظ مشغول الحين. انطر شوي وجرّب مرة ثانية.";
   return "ما انحفظت، يمكن النت قاطع. جرّب مرة ثانية.";
 }
@@ -572,9 +590,9 @@ function renderSegs(){
   $("f-shift").hidden = !admin;
   if (admin) seg("seg-shift", SHIFTS.map(s => ({k:s, t:s})), S.shift, "shift");
   $("seg-shift").classList.toggle("need", admin && !S.shift);
-  // a shift account only sees its own period (and, for a short while after handover, the one before it)
-  const list = admin ? PERIODS : PERIODS.filter(p => p.k === S.ctx.cur || (S.ctx.canLate && p.k === S.ctx.prev));
-  seg("seg-period", list.map(p => ({k:p.k, t: p.ar + (!admin && p.k !== S.ctx.cur ? " · متأخرة" : "")})), per.k, "period");
+  // a shift account only sees its own period
+  const list = admin ? PERIODS : PERIODS.filter(p => p.k === S.ctx.cur);
+  seg("seg-period", list.map(p => ({k:p.k, t: p.ar})), per.k, "period");
   $("seg-period").classList.toggle("fixed", list.length === 1);
   seg("seg-slot", per.slots.map(s => ({k:s, t:SLOT_LABEL[s]})), S.slot, "slot");
   $("nighthint").hidden = per.k !== "n";
@@ -594,7 +612,12 @@ function renderUnits(){
     }).join("") + `</div>`).join("") + `</div>`;
   $("units").innerHTML = (S.role === "shift" ? [S.dcr] : [1, 2]).map(n => block("DCR " + n, n === 1 ? [0, 1] : [2, 3])).join("");
   $("ucount").textContent = SLOT_LABEL[S.slot] + "  ·  " + done + "/" + visibleUnits().length;
+  $("save").textContent = isLastUnit() ? "حفظ" : "المقطرة التالية";
 }
+// the distillers of the DCR the selected one is in
+const blockOf = unit => DCR_UNITS[groupOf(unit) < 2 ? 0 : 1];
+// every other distiller of this DCR already has its reading for this time
+const isLastUnit = () => blockOf(S.unit).every(u => u === S.unit || entryOf(u, S.slot));
 function prevSlot(slot){ const i = SLOTS.indexOf(slot); return i > 0 ? SLOTS[i-1] : null; }
 function renderPrev(){
   const ps = prevSlot(S.slot); const pe = ps ? entryOf(S.unit, ps) : null;
@@ -608,8 +631,17 @@ function renderMeta(){
   let t = "لم يتم التسجيل إلى الآن.";
   if (e) {
     t = "مسجلة" + (e.s ? " · شفت " + e.s : "");
-    if (e.at) { try { t += " · " + new Intl.DateTimeFormat("ar-KW-u-nu-latn", {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit", hour12:false}).format(new Date(e.at)); } catch (x) {} }
-    if (e.by === "admin") t += " · دخلها المشرف";
+    // when it was written is for the admin only
+    if (S.role === "admin") {
+      const first = e.f || e.at;
+      if (first) t += " · سجلها " + hm(first) + (isLate(S.date, S.slot, first) ? " (متأخرة)" : "");
+      if (e.at && first && e.at - first > 60000) t += " · آخر تعديل " + hm(e.at);
+      if (e.by === "admin") t += " · دخلها المشرف";
+    }
+  }
+  if (S.role === "admin") {
+    const st = S.stamps[(groupOf(S.unit) < 2 ? 1 : 2) + "|" + S.slot];
+    if (st && st.length) t += " · ضغط حفظ " + st.map(x => hms(x.t)).join("، ");
   }
   $("fmeta").textContent = t;
   $("del").hidden = !(e && (S.role === "admin" || e.s === S.shift));
@@ -648,14 +680,26 @@ function renderMatrix(){
   let h = `<thead><tr><th rowspan="2" class="uh">Unit</th>` + PERIODS.map(p => `<th colspan="2" class="ph">${p.ar}</th>`).join("") +
     `</tr><tr>` + SLOTS.map(s => `<th>${SLOT_LABEL[s]}</th>`).join("") + `</tr></thead><tbody>`;
   const vu = visibleUnits(), hl = S.role === "shift";
-  $("mxhint").innerHTML = hl ? `<span class="key"></span>الأخضر هو اللي تقدر تسجله وتعدله الحين. الباقي للعرض بس.` : "الحرف هو الشفت اللي سجل. اضغط أي خانة تفتح قراءتها.";
+  const adm = S.role === "admin";
+  $("mxhint").innerHTML = hl ? `<span class="key"></span>الأخضر هو اللي تقدر تسجله وتعدله الحين. الباقي للعرض بس.` : "الحرف هو الشفت اللي سجل وتحته وقت التسجيل (البرتقالي متأخر أكثر من ساعة). صف \"حفظ\" يبين متى ضغط الشفت حفظ.";
   vu.forEach(u => {
     const i = UNITS.indexOf(u);
     h += `<tr class="${i === 8 && vu.length > 8 ? "dcr2" : (i % 4 === 0 ? "gs" : "")}"><th scope="row" class="uh">${u}</th>` + SLOTS.map(sl => {
-      const e = entryOf(u, sl);
+      const e = entryOf(u, sl), first = e ? (e.f || e.at) : null;
       const label = u + " " + SLOT_LABEL[sl] + " " + (e ? "شفت " + (e.s || "?") : "لم يتم التسجيل");
-      return `<td${hl && canEdit(u, sl) ? ' class="mine"' : ""}><button type="button" class="cell" data-unit="${u}" data-slot="${sl}" aria-label="${esc(label)}">${e ? chip(e) : `<span class="dot"></span>`}</button></td>`;
+      const tm = adm && first ? `<span class="tm${isLate(S.date, sl, first) ? " late" : ""}" dir="ltr">${hm(first)}</span>` : "";
+      return `<td${hl && canEdit(u, sl) ? ' class="mine"' : ""}><button type="button" class="cell" data-unit="${u}" data-slot="${sl}" aria-label="${esc(label)}">${e ? chip(e) + tm : `<span class="dot"></span>`}</button></td>`;
     }).join("") + `</tr>`;
+    if (adm && (i === 7 || i === 15)) {
+      const dcr = i === 7 ? 1 : 2;
+      h += `<tr class="stamp"><th scope="row" class="uh">حفظ</th>` + SLOTS.map(sl => {
+        const st = S.stamps[dcr + "|" + sl] || [];
+        if (!st.length) return `<td><span class="dot"></span></td>`;
+        const x = st[0];
+        return `<td title="${esc(st.map(y => (y.s || "?") + " " + hms(y.t)).join("  "))}">${x.s ? `<span class="chip" style="--h:${HUE[x.s]}">${x.s}</span>` : ""}` +
+          `<span class="tm" dir="ltr"> ${hm(x.t)}${st.length > 1 ? " ×" + st.length : ""}</span></td>`;
+      }).join("") + `</tr>`;
+    }
   });
   $("matrix").innerHTML = h + `</tbody>`;
 }
@@ -684,7 +728,7 @@ function renderSheet(){
     (anyIdle ? foot("Status", e => e ? STATUS_EN[e.st] : "") : "") + `</tfoot>`;
   $("sheet").innerHTML = h;
 }
-function renderReview(){ renderTiles(); renderMatrix(); renderSheet(); renderWeek(); }
+function renderReview(){ renderTiles(); renderMatrix(); renderSheet(); renderWeek(); renderRota(); }
 
 /* ---------- Excel (.xlsx written here, no outside library) ---------- */
 const colName = i => { let s = ""; i++; while (i > 0) { const r = (i - 1) % 26; s = String.fromCharCode(65 + r) + s; i = Math.floor((i - 1) / 26); } return s; };
@@ -878,28 +922,49 @@ function renderNotice(){
   if (S.fatal) { t = S.fatal; kind = "bad"; }
   else if (S.failed === "permission-denied") { t = "قاعدة البيانات رفضت هالحساب. المشرف يتأكد إن قواعد الحماية (Rules) منسوخة من ملف firestore.rules."; kind = "bad"; }
   else if (S.failed) { t = "ما قدرنا نجيب القراءات. حدّث الصفحة وجرّب مرة ثانية."; kind = "bad"; }
+  else if (S.ended) t = "خلص وقت دوام شفتك. بنطلعك من الحساب أول ما يرجع النت عشان ترتفع القراءات، فلا تسكر الصفحة.";
   else if (S.stale) t = "ما في نت الحين. اللي تسجله ينحفظ على الجهاز ويرتفع أول ما يرجع الاتصال، فلا تسكر الصفحة.";
   el.hidden = !t; el.textContent = t; el.dataset.kind = kind;
 }
 function fatal(t){ S.fatal = t; $("loading").hidden = true; renderNotice(); }
 
 /* ---------- data ---------- */
-let unsub = null, unsubCfg = null, staleT = 0;
+let unsub = null, unsubCfg = null, unsubSt = null, staleT = 0;
 function stopData(){
-  for (const u of [unsub, unsubCfg]) { if (u) { try { u(); } catch (e) {} } }
-  unsub = null; unsubCfg = null; clearTimeout(staleT); staleT = 0;
-  S.docs = {}; S.loaded = false; S.stale = false; S.failed = ""; S.week = {key:"", by:{}}; S.monthly = ""; monthlyFor = "";
+  for (const u of [unsub, unsubCfg, unsubSt]) { if (u) { try { u(); } catch (e) {} } }
+  unsub = null; unsubCfg = null; unsubSt = null; clearTimeout(staleT); staleT = 0;
+  S.docs = {}; S.stamps = {}; S.loaded = false; S.stale = false; S.failed = ""; S.ended = false; S.week = {key:"", by:{}}; S.monthly = ""; monthlyFor = "";
+}
+// The times a shift pressed "حفظ" on its last distiller. Only the admin can read them.
+function subscribeStamps(){
+  if (unsubSt) { try { unsubSt(); } catch (e) {} unsubSt = null; }
+  S.stamps = {};
+  if (!db || S.role !== "admin" || !S.date) return;
+  const date = S.date;
+  unsubSt = FB.onSnapshot(FB.query(FB.collection(db, "stamps"), FB.where("date", "==", date)), snap => {
+    if (date !== S.date) return;
+    const by = {};
+    snap.forEach(d => {
+      const x = d.data({serverTimestamps:"estimate"}), t = x ? msOf(x.at) : null;
+      if (!x || (x.dcr !== 1 && x.dcr !== 2) || !SLOTS.includes(x.slot) || t === null) return;
+      (by[x.dcr + "|" + x.slot] = by[x.dcr + "|" + x.slot] || []).push({t, s: SHIFTS.includes(x.s) ? x.s : ""});
+    });
+    for (const k in by) by[k].sort((a, b) => a.t - b.t);
+    S.stamps = by; renderMeta();
+    if (S.view === "review") renderMatrix();
+  }, () => {});
 }
 function subscribe(){
   if (unsub) { try { unsub(); } catch (e) {} unsub = null; }
   S.docs = {}; S.loaded = false; S.failed = "";
+  subscribeStamps();
   onData();
   if (!db || !S.role || !S.date) return;
   const date = S.date;
   unsub = FB.onSnapshot(FB.query(FB.collection(db, "sheets"), FB.where("date", "==", date)), {includeMetadataChanges:true}, snap => {
     if (date !== S.date) return;
     const docs = {};
-    snap.forEach(d => { const x = d.data(); if (x && Number.isInteger(x.g) && x.g >= 0 && x.g < GROUPS.length) docs[x.g] = x; });
+    snap.forEach(d => { const x = d.data({serverTimestamps:"estimate"}); if (x && Number.isInteger(x.g) && x.g >= 0 && x.g < GROUPS.length) docs[x.g] = x; });
     S.docs = docs; S.loaded = true;
     if (snap.metadata && snap.metadata.fromCache) {
       if (!staleT && !S.stale) staleT = setTimeout(() => { staleT = 0; S.stale = true; renderConn(); renderNotice(); }, 6000);
@@ -911,8 +976,7 @@ function subscribeCfg(){
   if (unsubCfg) { try { unsubCfg(); } catch (e) {} }
   unsubCfg = FB.onSnapshot(FB.doc(db, "config", "main"), snap => {
     S.cfg = cleanCfg(snap.exists() ? snap.data() : null);
-    renderSettings();
-    if (S.role === "shift") applyClock(false); else if (S.date) renderDate();
+    if (S.role === "admin" && S.date) renderDate();
     checkMonthly();
   }, () => {});
 }
@@ -936,16 +1000,16 @@ function commit(p){
 function setSaving(on){ S.form.saving = on; renderMeta(); }
 
 /* ---------- autosave ---------- */
-// Readings are stored a moment after typing stops, and before moving to another distiller, time or day.
-// Nobody has to press a save button.
+// Readings are stored right away: a moment after typing stops, when a box is left, and before moving
+// to another distiller, time or day. The "حفظ" button on the last distiller only records when the shift finished.
 const AUTO_NOTE = "الحفظ تلقائي";
 let saveT = 0, savingP = null;
 function stat(t, kind){ const el = $("fmsg"); el.textContent = t || ""; el.classList.toggle("good", kind === "good"); el.classList.toggle("note", kind === "note"); }
 function touchForm(swt){
   if (swt) S.form.swtDirty = true; else S.form.dirty = true;
   S.form.rev++;
-  clearTimeout(saveT); saveT = setTimeout(saveNow, 1500);
-  stat("تنحفظ أول ما توقف الكتابة…", "note");
+  clearTimeout(saveT); saveT = setTimeout(saveNow, 600);
+  stat("يحفظ…", "note");
 }
 function readForm(){
   const v = {}; let filled = 0, firstBad = null;
@@ -965,8 +1029,12 @@ async function doSave(){
   if (f.bad) { stat("في خانة قيمتها مو رقم. صحّحها عشان تنحفظ.", "bad"); return "invalid"; }
   if (!S.shift) { stat("اختر الشفت أول عشان تنحفظ القراءة.", "bad"); $("seg-shift").classList.add("need"); return "noshift"; }
   const data = {date, month:monthOf(date), g};
-  if (S.form.dirty && (f.filled || S.form.st !== "run"))
-    data.u = {[unit]:{[slot]:{s:S.shift, st:S.form.st, v:f.v, by: S.role === "admin" ? "admin" : S.dcr + S.shift.toLowerCase(), at:Date.now()}}};
+  if (S.form.dirty && (f.filled || S.form.st !== "run")) {
+    // server time: "at" is the last change, "f" the first time this reading was written (kept by the merge)
+    const e = {s:S.shift, st:S.form.st, v:f.v, by: S.role === "admin" ? "admin" : S.dcr + S.shift.toLowerCase(), at:FB.serverTimestamp()};
+    if (!entryOf(unit, slot)) e.f = FB.serverTimestamp();
+    data.u = {[unit]:{[slot]:e}};
+  }
   if (S.form.swtDirty) data.swt = f.sw;
   if (!data.u && !("swt" in data)) { if (S.form.rev === rev) S.form.dirty = false; stat(AUTO_NOTE, "note"); return "empty"; }
   setSaving(true); stat("يحفظ…", "note");
@@ -1002,14 +1070,26 @@ async function leave(){
   if (r === "noshift") { toast("اختر الشفت أول عشان تنحفظ القراءة."); return false; }
   return r !== "error";
 }
+// "المقطرة التالية" moves to the next distiller without a reading. On the last one the button says
+// "حفظ": pressing it records the exact time the shift finished this reading time (seen by the admin only).
+let stamping = false;
 async function onNext(ev){
   ev.preventDefault();
-  if (!db || !S.role || !(await leave())) return;
-  const unit = S.unit, slot = S.slot, g = groupOf(unit);
-  const block = g < 2 ? UNITS.slice(0, 8) : UNITS.slice(8), i = block.indexOf(unit);
+  if (!db || !S.role || stamping || !(await leave())) return;
+  const unit = S.unit, slot = S.slot, date = S.date, block = blockOf(unit), dcr = block === DCR_UNITS[0] ? 1 : 2, i = block.indexOf(unit);
   const next = block.slice(i + 1).concat(block.slice(0, i)).find(u => !entryOf(u, slot));
-  if (next) { await pickUnit(next, true); window.scrollTo({top: $("form").offsetTop - 70}); $("v1").focus({preventScroll:true}); }
-  else stat("كل مقطرات " + (g < 2 ? "DCR 1" : "DCR 2") + " مسجلة لهالوقت.", "good");
+  if (next) { await pickUnit(next, true); window.scrollTo({top: $("form").offsetTop - 70}); $("v1").focus({preventScroll:true}); return; }
+  if (!entryOf(unit, slot)) return stat("عبّ قراءة " + unit + " أو اختر حالتها قبل الحفظ.", "bad");
+  const done = "انحفظت قراءات DCR " + dcr + " الساعة " + SLOT_LABEL[slot] + " ✓";
+  if (S.role !== "shift") return stat(done, "good");
+  if (!canEdit(unit, slot)) return stat("خلص وقت دوام شفتك، ما تقدر تحفظ.", "bad");
+  stamping = true; $("save").disabled = true;
+  try {
+    const how = await commit(FB.addDoc(FB.collection(db, "stamps"),
+      {date, month:monthOf(date), dcr, slot, s:S.shift, by:S.dcr + S.shift.toLowerCase(), at:FB.serverTimestamp()}));
+    stat(how === "ok" ? done : "انحفظت على الجهاز، وبترتفع أول ما يرجع النت.", "good"); toast(done);
+  } catch (err) { stat(errText(err), "bad"); }
+  finally { stamping = false; $("save").disabled = false; }
 }
 let delArmed = 0;
 function resetDel(){ clearTimeout(delArmed); delArmed = 0; $("del").textContent = "مسح القراءة"; }
@@ -1038,34 +1118,48 @@ async function pickUnit(u, force){
 async function pickSlot(sl, force){
   if (!SLOTS.includes(sl)) return;
   if (!force && sl !== S.slot && !(await leave())) return;
-  S.slot = sl; renderSegs(); renderUnits(); fillForm(); stat(AUTO_NOTE, "note");
+  S.slot = sl; autoShift(); renderSegs(); renderUnits(); fillForm(); stat(AUTO_NOTE, "note");
 }
+// For the admin the shift letter follows the schedule for the chosen day and time; it can still be changed by hand.
+function autoShift(){ if (S.role === "admin" && S.date && SLOTS.includes(S.slot)) S.shift = rotaShift(S.date, periodOf(S.slot).k); }
 async function pickDate(d, force){
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) { renderDate(); return; }
   if (d === S.date) return;
   if (!force && !(await leave())) { renderDate(); return; }
   S.date = d; S.form.dirty = false; S.form.swtDirty = false; stat(AUTO_NOTE, "note");
-  renderDate(); subscribe();
+  autoShift(); renderDate(); renderSegs(); subscribe();
   if (S.view === "review") loadWeek();
 }
 // For a shift account the period and the sheet date follow the clock; only the reading time is chosen.
+// When the shift's duty time is over (shift schedule), it is signed out.
 function applyClock(force){
   if (S.role !== "shift") return;
-  const c = clock();
-  if (S.late && !c.canLate) S.late = false;
-  const period = S.late ? c.prev : c.cur, date = sheetDateFor(period, c);
+  const d = duty(), c = d.c;
+  if (d.shift !== S.shift) { endShift(); return; }
+  const period = d.period, date = d.day;
   const moved = period !== S.ctx.period || date !== S.ctx.date;
   const busy = S.form.dirty || S.form.swtDirty || S.form.saving;
   if (moved && busy && !force) return;                    // let them finish what they are typing
-  const shown = moved || c.canLate !== S.ctx.canLate || c.cur !== S.ctx.cur;
-  S.ctx = {cur:c.cur, prev:c.prev, canLate:c.canLate, period, date};
-  if (S.view !== "entry") { if (shown) renderReview(); return; }
+  S.ctx = {cur:c.cur, period, date};
+  if (S.view !== "entry") { if (moved) renderReview(); return; }
   const slots = PERIODS.find(p => p.k === period).slots;
   let refill = moved;
   if (!slots.includes(S.slot)) { S.slot = defaultSlot(period, c); refill = true; }
   if (S.date !== date) { S.date = date; S.form.dirty = false; S.form.swtDirty = false; renderDate(); renderSegs(); subscribe(); return; }
   renderSegs();
   if (refill) { S.form.dirty = false; S.form.swtDirty = false; renderUnits(); fillForm(); }
+}
+let ending = false;
+async function endShift(){
+  if (ending || S.role !== "shift" || !auth) return;
+  ending = true;
+  try {
+    if (S.form.dirty || S.form.swtDirty) await Promise.race([saveNow(), sleep(4000)]);   // the last typing is still stored
+    if (S.stale) { S.ended = true; renderNotice(); return; }                          // offline: wait, so nothing waiting to upload is lost
+    S.loginMsg = "خلص وقت دوام شفت " + S.shift + ". " + offDuty(S.shift, duty()).split(". ")[1];
+    S.form.dirty = false; S.form.swtDirty = false;
+    await FB.signOut(auth).catch(() => {});
+  } finally { ending = false; }
 }
 function setView(v){
   S.view = v;
@@ -1107,23 +1201,19 @@ function renderWeek(){
   }
   $("week").innerHTML = h + `</tbody>`;
 }
-let setDirty = false;
-function renderSettings(){
-  if (setDirty) return;
-  for (const k of ORDER) $("set-" + k).value = String(S.cfg.starts[k]);
-  $("set-g").value = String(S.cfg.grace);
-}
-async function onSettings(ev){
-  ev.preventDefault();
-  const el = $("smsg"); const say = (t, good) => { el.textContent = t; el.classList.toggle("good", !!good); };
-  const starts = {m:Number($("set-m").value), a:Number($("set-a").value), n:Number($("set-n").value)};
-  const grace = Number($("set-g").value);
-  if (!validStarts(starts)) return say("المواعيد لازم تكون بالترتيب: M، بعده A، بعده N.");
-  if (!Number.isInteger(grace) || grace < 0 || grace > 240) return say("المهلة من 0 إلى 240 دقيقة.");
-  $("set-save").disabled = true; say("");
-  try { await commit(FB.setDoc(FB.doc(db, "config", "main"), {starts, grace}, {merge:true})); setDirty = false; say("انحفظت المواعيد.", true); }
-  catch (err) { say(errText(err)); }
-  finally { $("set-save").disabled = false; }
+// The shift schedule for the coming week, with the shift on duty now marked.
+function renderRota(){
+  if (S.role !== "admin") return;
+  const now = duty(), start = now.day;
+  let h = `<thead><tr><th class="uh">Date</th>` + PERIODS.map(p => `<th class="ph">${p.ar}<br><small dir="ltr">${RANGE[p.k]}</small></th>`).join("") + `<th class="ph">OFF</th></tr></thead><tbody>`;
+  for (let i = 0; i < 7; i++) {
+    const date = addDays(start, i), on = PERIODS.map(p => rotaShift(date, p.k));
+    let day = ""; try { day = new Intl.DateTimeFormat("en-GB", {weekday:"short"}).format(parseYmd(date)); } catch (e) {}
+    h += `<tr><th scope="row" class="uh">${day} ${dmy(date).slice(0, 5)}</th>` +
+      PERIODS.map((p, k) => `<td class="wk${i === 0 && p.k === now.period ? " now" : ""}"><span class="chip" style="--h:${HUE[on[k]]}">${on[k]}</span></td>`).join("") +
+      `<td class="wk none">${SHIFTS.filter(x => !on.includes(x)).map(x => `<span class="chip none">${x}</span>`).join("")}</td></tr>`;
+  }
+  $("rota").innerHTML = h + `</tbody>`;
 }
 
 /* ---------- idle sign-out (shift accounts only, never the admin) ---------- */
@@ -1145,20 +1235,25 @@ function idleOut(){
 }
 function onActivity(){ if (!idleOut()) touch(false); }
 
-/* ---------- change own password ---------- */
+/* ---------- passwords (admin only) ---------- */
+// Shift accounts cannot change any password. The admin changes a shift's password by signing in as that
+// account in a separate, temporary session (so the admin stays signed in) and setting the new one.
 function pwSay(t){ $("pw-msg").textContent = t || ""; }
+function renderPwAcc(){
+  seg("seg-pwacc", ACCS, S.pw.acc, "pwacc");
+  seg("seg-pwdcr", [{k:1, t:"DCR 1"}, {k:2, t:"DCR 2"}], S.pw.dcr, "pwdcr");
+  $("f-pwdcr").hidden = S.pw.acc === "admin";
+}
 function togglePw(show){
-  const el = $("pwcard"), open = show === undefined ? el.hidden : show;
+  const el = $("pwcard"), open = S.role === "admin" && (show === undefined ? el.hidden : show);
   el.hidden = !open; pwSay("");
   for (const id of ["pw-cur", "pw-new", "pw-new2"]) $(id).value = "";
-  if (open) {
-    $("pw-who").textContent = S.role === "shift" ? "هالحساب يدخل فيه كل اللي على شفتك بقسمك. بعد التغيير عطهم الكلمة الجديدة." : "";
-    $("pw-cur").focus();
-  }
+  if (open) { renderPwAcc(); $("pw-cur").focus(); }
 }
 function pwError(err){
   const c = (err && err.code) || "";
-  if (/wrong-password|invalid-credential|invalid-login/.test(c)) return "كلمة السر الحالية غلط.";
+  if (/wrong-password|invalid-credential|invalid-login|user-not-found/.test(c)) return "كلمة السر الحالية لهالحساب غلط، أو الحساب مو مضاف.";
+  if (/user-disabled/.test(c)) return "هالحساب موقوف بـFirebase.";
   if (/weak-password/.test(c)) return "كلمة السر الجديدة ضعيفة. اختر أطول.";
   if (/too-many-requests/.test(c)) return "محاولات وايد. انطر كم دقيقة وجرّب مرة ثانية.";
   if (/network-request-failed/.test(c)) return "ما في نت. تأكد من الاتصال وجرّب مرة ثانية.";
@@ -1166,21 +1261,30 @@ function pwError(err){
 }
 async function onPassword(ev){
   ev.preventDefault();
-  const u = auth && auth.currentUser; if (!u) return;
+  const me = auth && auth.currentUser; if (!me || S.role !== "admin") return;
   const cur = $("pw-cur").value, n1 = $("pw-new").value, n2 = $("pw-new2").value;
   if (!cur || !n1 || !n2) return pwSay("عبّي الخانات الثلاث.");
   if (n1.length < 6) return pwSay("كلمة السر الجديدة لازم تكون 6 خانات أو أكثر.");
   if (/^(.)\1*$/.test(n1)) return pwSay("اختر كلمة سر مو كلها نفس الرقم أو الحرف.");
   if (n1 !== n2) return pwSay("الكلمتين الجديدتين مو نفس بعض.");
   if (n1 === cur) return pwSay("الجديدة نفس الحالية.");
+  const acc = S.pw.acc, name = acc === "admin" ? "المشرف" : "شفت " + acc + " · DCR " + S.pw.dcr;
   $("pw-save").disabled = true; pwSay("");
+  let app2 = null;
   try {
-    // the current password is checked again by Firebase before the change is accepted
-    await FB.reauthenticateWithCredential(u, FB.EmailAuthProvider.credential(u.email, cur));
-    await FB.updatePassword(u, n1);
-    togglePw(false); toast("تغيرت كلمة السر.");
+    if (acc === "admin") {
+      await FB.reauthenticateWithCredential(me, FB.EmailAuthProvider.credential(me.email, cur));
+      await FB.updatePassword(me, n1);
+    } else {
+      app2 = FB.initializeApp(CFG.firebase, "pw" + Date.now());
+      const a2 = FB.initializeAuth(app2, {persistence: FB.inMemoryPersistence});
+      const cred = await FB.signInWithEmailAndPassword(a2, emailOf(acc, S.pw.dcr), cur);
+      await FB.updatePassword(cred.user, n1);
+      await FB.signOut(a2).catch(() => {});
+    }
+    togglePw(false); toast("تغيرت كلمة سر " + name + ".");
   } catch (err) { pwSay(pwError(err)); }
-  finally { $("pw-save").disabled = false; }
+  finally { $("pw-save").disabled = false; if (app2) FB.deleteApp(app2).catch(() => {}); }
 }
 
 /* ---------- sign-in ---------- */
@@ -1191,9 +1295,12 @@ function renderAcc(){
   seg("seg-acc", ACCS, S.acc, "acc");
   seg("seg-accdcr", [{k:1, t:"DCR 1"}, {k:2, t:"DCR 2"}], S.accDcr, "accdcr");
   $("f-accdcr").hidden = S.acc === "admin";
+  const d = duty();
+  $("dutyhint").textContent = "على الدوام الحين: شفت " + d.shift + " · " + d.period.toUpperCase() + " (" + RANGE[d.period] + "). باقي الشفتات ما تقدر تدخل بغير وقت دوامها.";
 }
 function showLogin(){
   $("loading").hidden = true; $("app").hidden = true; $("who").hidden = true; $("pwcard").hidden = true; $("view-login").hidden = false;
+  if (S.acc !== "admin") S.acc = duty().shift;            // start on the shift whose duty it is now
   renderAcc(); lmsg(S.loginMsg); S.loginMsg = "";
 }
 function loginError(err){
@@ -1209,6 +1316,7 @@ async function onLogin(ev){
   ev.preventDefault();
   if (!auth) return;
   const pass = $("pass").value;
+  if (S.acc !== "admin") { const d = duty(); if (d.shift !== S.acc) { renderAcc(); return lmsg(offDuty(S.acc, d)); } }
   if (!pass) return lmsg("اكتب كلمة السر.");
   $("login").disabled = true; lmsg("");
   touch(true);
@@ -1224,6 +1332,10 @@ function onAuth(user){
   if (m && m[3] === DOMAIN && SHIFTS.includes(m[2].toUpperCase())) { S.role = "shift"; S.shift = m[2].toUpperCase(); S.dcr = Number(m[1]); }
   else if (email === "admin@" + DOMAIN) S.role = "admin";
   else { S.role = null; S.loginMsg = "هالحساب مو معرّف بالبرنامج."; FB.signOut(auth).catch(() => {}); return; }
+  if (S.role === "shift") {                                // outside its duty time a shift cannot stay in
+    const d = duty();
+    if (d.shift !== S.shift) { S.loginMsg = offDuty(S.shift, d); S.role = null; FB.signOut(auth).catch(() => {}); return; }
+  }
   lastActive = Number(ls("dcr.active")) || Date.now();      // a restored session continues from its last activity
   if (idleOut()) return;
   startApp();
@@ -1239,14 +1351,13 @@ function startApp(){
   S.group = groupOf(S.unit);
   b.style.setProperty("--h", admin ? "200" : String(HUE[S.shift]));
   b.classList.toggle("adm", admin);
-  for (const id of ["weekcard", "setcard", "x-day", "x-month"]) $(id).hidden = !admin;
-  S.late = false; S.form.dirty = false; S.form.swtDirty = false; setDirty = false; stat(AUTO_NOTE, "note");
-  S.ctx = {cur:"", prev:"", canLate:false, period:"", date:""};
-  subscribeCfg(); renderSettings();
+  for (const id of ["weekcard", "rotacard", "x-day", "x-month", "pw-open"]) $(id).hidden = !admin;
+  S.form.dirty = false; S.form.swtDirty = false; S.ended = false; stat(AUTO_NOTE, "note");
+  S.ctx = {cur:"", period:"", date:""};
+  subscribeCfg();
   if (admin) {
-    const c = clock(); const sh = ls("dcr.shift");
-    S.shift = SHIFTS.includes(sh) ? sh : null;
-    S.date = sheetDateFor(c.cur, c); S.slot = defaultSlot(c.cur, c);
+    const c = clock();
+    S.date = sheetDateFor(c.cur, c); S.slot = defaultSlot(c.cur, c); autoShift();
     renderDate(); renderSegs(); setView("review"); subscribe();
   } else { S.date = ""; S.slot = ""; setView("entry"); }
 }
@@ -1265,13 +1376,10 @@ function wire(){
     if (r === "queued") return toast("في قراءات ما ارتفعت للحين لأن النت مقطوع. لا تطلع لين يرجع النت.");
     FB.signOut(auth).catch(() => {});
   });
-  on("seg-shift", "click", ev => { const k = pressed(ev, "shift"); if (!k || S.role !== "admin") return; S.shift = k; ls("dcr.shift", k); renderSegs(); if (S.form.dirty || S.form.swtDirty) saveNow(); else stat(AUTO_NOTE, "note"); });
-  on("seg-period", "click", async ev => {
-    const k = pressed(ev, "period"); if (!k) return;
-    if (S.role === "admin") { const p = PERIODS.find(x => x.k === k); if (!p.slots.includes(S.slot)) pickSlot(p.slots[0]); return; }
-    const late = k !== S.ctx.cur;
-    if (late === S.late || (late && !S.ctx.canLate) || !(await leave())) return;
-    S.late = late; S.form.dirty = false; S.form.swtDirty = false; applyClock(true);
+  on("seg-shift", "click", ev => { const k = pressed(ev, "shift"); if (!k || S.role !== "admin") return; S.shift = k; renderSegs(); if (S.form.dirty || S.form.swtDirty) saveNow(); else stat(AUTO_NOTE, "note"); });
+  on("seg-period", "click", ev => {
+    const k = pressed(ev, "period"); if (!k || S.role !== "admin") return;
+    const p = PERIODS.find(x => x.k === k); if (!p.slots.includes(S.slot)) pickSlot(p.slots[0]);
   });
   on("seg-slot", "click", ev => { const k = pressed(ev, "slot"); if (k) pickSlot(k); });
   on("seg-status", "click", ev => { const k = pressed(ev, "st"); if (!k) return; S.form.st = k; renderStatus(); touchForm(false); });
@@ -1281,11 +1389,12 @@ function wire(){
     const b = ev.target.closest("button[data-unit]"); if (!b) return;
     const u = b.getAttribute("data-unit"), sl = b.getAttribute("data-slot");
     if (S.role === "shift") {
-      if (!canEdit(u, sl)) return toast("هالخانة للعرض بس. تسجيلك يكون لفترتك الحالية ولمقطرات قسمك.");
-      S.late = periodOf(sl).k !== clock().cur;
+      if (!canEdit(u, sl)) return toast("هالخانة للعرض بس. تسجيلك يكون بوقت دوامك، لفترتك ولمقطرات قسمك.");
     }
     if ((u !== S.unit || sl !== S.slot) && !(await leave())) return;
+    const slotMoved = sl !== S.slot;
     S.unit = u; S.group = groupOf(u); S.slot = sl; ls("dcr.unit", u);
+    if (slotMoved) autoShift();
     S.form.dirty = false; S.form.swtDirty = false;
     setView("entry"); renderSegs(); renderUnits(); fillForm();
     window.scrollTo({top: $("form").offsetTop - 70});
@@ -1293,6 +1402,9 @@ function wire(){
   on("week", "click", ev => { const b = ev.target.closest("button[data-date]"); if (b) { pickDate(b.getAttribute("data-date")); window.scrollTo({top:0}); } });
   on("rows", "input", ev => { latinize(ev.target); touchForm(false); });
   on("swt", "input", ev => { latinize(ev.target); touchForm(true); });
+  // leaving a box stores it at once
+  on("rows", "change", () => { if (S.form.dirty) saveNow(); });
+  on("swt", "change", () => { if (S.form.swtDirty) saveNow(); });
   // when the cursor leaves the form, show the stored values in sheet format (1.4 becomes 1.40)
   on("form", "focusout", () => setTimeout(() => { if (!$("form").contains(document.activeElement) && !S.form.dirty && !S.form.swtDirty && !S.form.saving) fillForm(); }, 0));
   on("form", "keydown", ev => {
@@ -1316,6 +1428,8 @@ function wire(){
   on("pw-open", "click", () => togglePw());
   on("pw-cancel", "click", () => togglePw(false));
   on("pwcard", "submit", onPassword);
+  on("seg-pwacc", "click", ev => { const k = pressed(ev, "pwacc"); if (!k) return; S.pw.acc = k; renderPwAcc(); pwSay(""); });
+  on("seg-pwdcr", "click", ev => { const k = pressed(ev, "pwdcr"); if (!k) return; S.pw.dcr = Number(k); renderPwAcc(); pwSay(""); });
   on("mo-get", "click", onMonthly);
   on("d-prev", "click", () => pickDate(addDays(S.date, -1)));
   on("d-next", "click", () => pickDate(addDays(S.date, 1)));
@@ -1323,8 +1437,6 @@ function wire(){
   on("tab-entry", "click", () => setView("entry"));
   on("tab-review", "click", () => setView("review"));
   on("x-day", "click", exportDay); on("x-month", "click", exportMonth); on("x-copy", "click", copySheet);
-  on("setcard", "input", () => { setDirty = true; });
-  on("setcard", "submit", onSettings);
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) { if (S.form.dirty || S.form.swtDirty) saveNow(); return; }   // store at once when the page is put away
     if (!idleOut()) applyClock(false);
@@ -1337,7 +1449,6 @@ function wire(){
 async function boot(){
   if (CFG.title) { document.title = CFG.title; $("title").textContent = CFG.title; }
   buildRows();
-  for (const k of ORDER) $("set-" + k).innerHTML = Array.from({length:24}, (x, h) => `<option value="${h}">${pad(h)}:00</option>`).join("");
   wire();
   const fc = CFG.firebase || {};
   if (!fc.apiKey || !fc.projectId) return fatal("البرنامج مو مربوط بقاعدة البيانات للحين. عبّي بيانات Firebase بملف config.js.");
@@ -1348,7 +1459,11 @@ async function boot(){
   try { const app = FB.initializeApp(fc); auth = FB.getAuth(app); db = FB.getFirestore(app); }
   catch (e) { return fatal("بيانات Firebase بملف config.js فيها غلط."); }
   FB.onAuthStateChanged(auth, onAuth);
-  setInterval(() => { if (!idleOut()) applyClock(false); }, 30000);
+  setInterval(() => {
+    if (!idleOut()) applyClock(false);
+    if (!S.role && !$("view-login").hidden) renderAcc();
+    else if (S.role === "admin" && S.view === "review") renderRota();
+  }, 30000);
 }
 boot();
 </script>
